@@ -59,6 +59,8 @@ public:
     void resetDestinations();
     
     // Autres fonctions membres utiles
+    bool getNeedToReset();
+    void setNeedToReset(bool need);
     void reinitJour();
     void printInfos(int deltaT) const;
     
@@ -88,6 +90,7 @@ private:
     double longueurTrajet; // tous les trajets ont la même longueur
     std::vector<int> destinations;
     std::vector<int> horaireDepart; // utilisation horaireDepart[nbTrajetsJournee]
+    bool needToReset;
 };
 
 #endif /* defined(__modele_simulation__Vehicule__) */

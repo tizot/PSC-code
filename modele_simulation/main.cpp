@@ -29,12 +29,8 @@ vector<double> modele(int dureeSimulation, int deltaT, int tailleEchantillon) { 
     
     for (int i(0); i < tailleEchantillon; i++) {
         Vehicule *vehicule = new Vehicule(deltaT);
-        cout << "Véhicule " << (i+1) << endl;
         int temps(0);
         while(temps < dureeSimulation) {
-            if (temps > 0 && ((temps * deltaT) % 1440 == 0)) {
-                vehicule->reinitJour(); // on réinitialise certaines données à 00h00 chaque jour
-            }
             vehicule->simulation(temps, deltaT, puissanceReseau);
             temps++;
         }
@@ -60,8 +56,8 @@ int main(int argc, const char * argv[]) {
             int nbMinute = (duree*deltaT - nbJour*1440 - nbHeure*60);
             cout << "Durée = ";
             if (nbJour > 0)
-                cout << nbJour << "j";
-            cout << nbHeure << "h" << nbMinute << endl;
+                cout << nbJour << " j ";
+            cout << nbHeure << " h " << nbMinute << endl;
             try {
                 int taille = boost::lexical_cast<int>(argv[3]);
                 cout << "Nb de VE = " << taille << endl;

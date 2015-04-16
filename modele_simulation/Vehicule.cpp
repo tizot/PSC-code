@@ -132,7 +132,7 @@ void initAccesBornes(bool accesBornes[], int typeVE) {
                 accesBornes[REPAS] = (boost::random::bernoulli_distribution<> (0.5))(gen); // 1 chance sur 2 d'avoir une borne lors d'un déplacement
                 break;
         }
-    } while (!(accesBornes[MAISON] && accesBornes[TRAVAIL] && accesBornes[REPAS]));
+    } while (!(accesBornes[MAISON] || accesBornes[TRAVAIL] || accesBornes[REPAS]));
 }
 
 int initHoraireDepart(int deltaT, int minDepart) {
@@ -223,9 +223,9 @@ Vehicule::Vehicule(int deltaT) {
     etatMouvSuivant = BRANCHE_EN_CHARGE; // BRANCHE_EN_CHARGE
     distanceParcourue = 0;
     nbTrajetsEffectues = 0;
-    willToCharge = false;
+    willToCharge = true;
     typeVehicule = initType();
-    position = (typeVehicule == VE_PARTICULIER) ? MAISON : TRAVAIL; // HOME
+    position = (typeVehicule == VE_PARTICULIER) ? MAISON : TRAVAIL;
     modele = initModele(typeVehicule);
     capacite = stats_capaciteVehicule[modele];
     vitesse = initVitesse(); // en km/h
@@ -249,7 +249,7 @@ Vehicule::Vehicule(int deltaT) {
     initAccesBornes(accesBornes, typeVehicule);
     if (!accesBornes[destinations.back()]) { // pour éviter qu'un véhicule n'ait pas de borne en fin de journée
         nbTrajets++;
-        horaireDepart.push_back(giveDestination(typeVehicule, destinations.back(), horaireDepart.back(), deltaT));
+        horaireDepart.push_back(initHoraireDepart(deltaT, (horaireDepart.back() + (int)std::ceil((longueurTrajet / vitesse) * 60 / deltaT)) % 1440));
         switch (typeVehicule) {
             case VE_ENTREPRISE:
                 destinations.push_back(TRAVAIL);
@@ -319,7 +319,8 @@ int Vehicule::transition(int temps, int deltaT) {
         
         if (getEtatMouvActuel() == GARE_NON_BRANCHE) {
             if (!getAccesBornes(getPosition()) || !getWillToCharge()) {
-                std::cout << "J'ai pas de bornes !!! :'(" << std::endl;
+                if (!getWillToCharge())
+                    std::cout << "J'ai pas de bornes !!! :'(" << std::endl;
                 setEtatMouvSuivant(GARE_NON_BRANCHE);
                 return 0;
             }
@@ -341,6 +342,14 @@ int Vehicule::transition(int temps, int deltaT) {
 }
 
 void Vehicule::simulation(int temps, int deltaT, std::vector<double>& puissanceReseau) {
+    if (temps > 0 && (temps * deltaT) % 1440 == 0) {
+        setNeedToReset(true);
+    }
+    
+    if (getEtatMouvActuel() != EN_TRAIN_DE_ROULER && getNeedToReset()) {
+        reinitJour(); // on réinitialise certaines données à 00h00 chaque jour
+    }
+    
     int mouv(getEtatMouvActuel());
     
     if (mouv == EN_TRAIN_DE_ROULER) {
@@ -528,10 +537,19 @@ void Vehicule::resetDestinations() {
     destinations = newDest;
 }
 
+bool Vehicule::getNeedToReset() {
+    return needToReset;
+}
+
+void Vehicule::setNeedToReset(bool need) {
+    needToReset = need;
+}
+
 void Vehicule::reinitJour() {
     // Réinitialisation de certaines variables à minuit
     setDistanceParcourue(0); // Et si on a un trajet en cours à 00h00 ???
     resetNbTrajetsEffectues();
+    setNeedToReset(false);
 }
 
 void Vehicule::printInfos(int deltaT) const {
