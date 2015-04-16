@@ -60,7 +60,7 @@ public:
     
     // Autres fonctions membres utiles
     void reinitJour();
-    void printInfos() const;
+    void printInfos(int deltaT) const;
     
     // Fonctions pour le modèle
     int transition(int temps, int deltaT);

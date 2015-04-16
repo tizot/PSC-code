@@ -217,7 +217,7 @@ Vehicule::Vehicule() {
 
 Vehicule::Vehicule(int deltaT) {
     // Paramètres variables
-    soc = 100;
+    soc = 80;
     position = 0; // HOME
     etatMouvActuel = BRANCHE_EN_CHARGE; // BRANCHE_EN_CHARGE
     etatMouvSuivant = BRANCHE_EN_CHARGE; // BRANCHE_EN_CHARGE
@@ -278,6 +278,8 @@ int Vehicule::transition(int temps, int deltaT) {
     int mouv(getEtatMouvActuel());
     
     if (mouv == EN_TRAIN_DE_ROULER) {
+        std::cout << "Distance restante : " << getDistanceRestante() << std::endl;
+        std::cout << "SOC restant : " << getSoc() << std::endl;
         if ((getDistanceRestante() <= 0) || (getSoc() <= 0)) {
             setEtatMouvSuivant(GARE_NON_BRANCHE); // on passe par l'état GARE_NON_BRANCHE avant l'état BRANCHE_* (car deltaT petit)
             computeSocMin(deltaT);
@@ -287,7 +289,7 @@ int Vehicule::transition(int temps, int deltaT) {
             return 0;
         }
     } else {
-        if (getNbTrajets() > getNbTrajetsEffectues() && ((temps * deltaT) % 86400) >= getHoraireDepart(getNbTrajetsEffectues())) {
+        if (getNbTrajets() > getNbTrajetsEffectues() && ((temps * deltaT) % 86400) >= deltaT * getHoraireDepart(getNbTrajetsEffectues())) {
             if (getSoc() >= getSocMin()) {
                 setEtatMouvSuivant(EN_TRAIN_DE_ROULER);
                 return 0;
@@ -322,11 +324,11 @@ void Vehicule::simulation(int temps, int deltaT, std::vector<double>& puissanceR
     int mouv(getEtatMouvActuel());
     
     if (mouv == EN_TRAIN_DE_ROULER) {
-        setSoc(getSoc() - (getVitesse() * deltaT/60.0) * (getConsommation() / getCapacite()));
-        setDistanceParcourue(getDistanceParcourue() + getVitesse() * deltaT/60.0);
-        setDistanceRestante(getDistanceRestante() - getVitesse() * deltaT/60.0);
+        setSoc(std::max(0.0, getSoc() - 100 * (getVitesse() * deltaT/60.0) * (getConsommation() / getCapacite())));
+        setDistanceParcourue(getDistanceParcourue() + std::min(getDistanceRestante(), getVitesse() * deltaT/60.0)); // usage de 'min' pour éviter d'avoir une distance parcourue supérieure à la distance à parcourir initialement
+        setDistanceRestante(std::max(0.0, getDistanceRestante() - getVitesse() * deltaT/60.0)); // usage de 'max' pour éviter d'avoir une distance restante négative
     } else if (mouv == BRANCHE_EN_CHARGE && getSoc() < 100) {
-        setSoc(std::min(100.0, getSoc() + 100.0 * (deltaT/60.0) * (getPuissanceCharge() / getCapacite()))); //puissanceCharge() fonction qui peut dépendre des paramètres qu'on veut, pour anticiper le smartgrid de ce coté là aussi.
+        setSoc(std::min(100.0, getSoc() + 100.0 * (deltaT/60.0) * (getPuissanceCharge() / getCapacite()))); //puissanceCharge() fonction qui peut dépendre des paramètres qu'on veut, pour anticiper le smartgrid de ce coté là aussi. // usage de 'min' pour éviter d'avoir un SOC > 100
         puissanceReseau[temps] = puissanceReseau[temps] + getPuissanceCharge();
     }
     
@@ -337,6 +339,7 @@ void Vehicule::simulation(int temps, int deltaT, std::vector<double>& puissanceR
     if (mouvSuiv == EN_TRAIN_DE_ROULER) {
         if (mouv != EN_TRAIN_DE_ROULER) {
             setPosition(getProchaineDestination());
+            setDistanceRestante(getLongueurTrajet());
             incNbTrajetsEffectues();
         } else {
             setEtatMouvActuel(getEtatMouvSuivant());
@@ -368,12 +371,12 @@ double Vehicule::getSocMin() {
 }
 
 void Vehicule::computeSocMin(int deltaT) {
-    if (socMin == 0) {
+    if (socMin <= 0) {
         int nbTrajets(getNbTrajetsEffectues());
         int nbTrajetsMax = getNbTrajets();
         double longueurTrajet(getLongueurTrajet());
         double distanceAvantBorne(longueurTrajet);
-        while(!getAccesBornes(getDestination(nbTrajets % nbTrajetsMax))){
+        while(!getAccesBornes(getDestination(nbTrajets % nbTrajetsMax)) && nbTrajets <= nbTrajetsMax){
             nbTrajets++;
             distanceAvantBorne += longueurTrajet;
         }
@@ -511,11 +514,12 @@ void Vehicule::reinitJour() {
     resetNbTrajetsEffectues();
 }
 
-void Vehicule::printInfos() const {
+void Vehicule::printInfos(int deltaT) const {
     std::cout << "Type : " << listeTypeVehicule[typeVehicule] << std::endl;
     std::cout << "Modèle : " << listeModeleVehicule[modele] << std::endl;
     std::cout << "Consommation : " << consommation << " kWh/km" << std::endl;
     std::cout << "Vitesse : " << vitesse << " km/h" << std::endl;
+    std::cout << "Distance d'un trajet : " << longueurTrajet << std::endl;
     std::cout << "SOC : " << soc << " %" << std::endl;
     std::cout << "SOC min : " << socMin << " %" << std::endl;
     std::cout << "Capacité : " << capacite << " kWh" << std::endl;
@@ -526,7 +530,7 @@ void Vehicule::printInfos() const {
     std::cout << "Nombre de trajets effectués : " << nbTrajetsEffectues << std::endl;
     std::cout << "Horaires de départ : " << std::endl;
     for (int i(0); i < nbTrajets; i++) {
-        std::cout << "\t" << horaireDepart[i] / 12 << "h" << (horaireDepart[i] % 12)*5 << " --> " << listePosition[destinations[i]] << std::endl;
+        std::cout << "\t" << ((horaireDepart[i] * deltaT)/60) % 24 << "h" << (horaireDepart[i] * deltaT) % 60 << " --> " << listePosition[destinations[i]] << std::endl;
     }
     
 }
