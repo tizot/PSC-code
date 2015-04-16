@@ -118,19 +118,21 @@ int initNbTrajets() {
 }
 
 void initAccesBornes(bool accesBornes[], int typeVE) {
-    switch (typeVE) {
-        case VE_PARTICULIER:
-            accesBornes[MAISON] = distAccesBorneHOME(gen);
-            accesBornes[TRAVAIL] = distAccesBorneWORK(gen);
-            accesBornes[REPAS] = distAccesBorneLUNCH(gen);
-            break;
-            
-        default:
-            accesBornes[MAISON] = false; // VEE et VAP n'ont pas de maison
-            accesBornes[TRAVAIL] = true; // Ils sont toujours des bornes de recharge (AutoLib' ou locaux de l'entreprise)
-            accesBornes[REPAS] = (boost::random::bernoulli_distribution<> (0.5))(gen); // 1 chance sur 2 d'avoir une borne lors d'un déplacement
-            break;
-    }
+    do { // pour éviter qu'un véhicule n'ait pas de borne du tout
+        switch (typeVE) {
+            case VE_PARTICULIER:
+                accesBornes[MAISON] = distAccesBorneHOME(gen);
+                accesBornes[TRAVAIL] = distAccesBorneWORK(gen);
+                accesBornes[REPAS] = distAccesBorneLUNCH(gen);
+                break;
+                
+            default:
+                accesBornes[MAISON] = false; // VEE et VAP n'ont pas de maison
+                accesBornes[TRAVAIL] = true; // Ils sont toujours des bornes de recharge (AutoLib' ou locaux de l'entreprise)
+                accesBornes[REPAS] = (boost::random::bernoulli_distribution<> (0.5))(gen); // 1 chance sur 2 d'avoir une borne lors d'un déplacement
+                break;
+        }
+    } while (!(accesBornes[MAISON] && accesBornes[TRAVAIL] && accesBornes[REPAS]));
 }
 
 int initHoraireDepart(int deltaT, int minDepart) {
@@ -151,7 +153,7 @@ int giveDestination(int typeVE, int positionActuelle, int temps, int deltaT) {
     int res(-1);
     switch (typeVE) {
         case VE_ENTREPRISE: {
-            if ((deltaT * temps) % 86400 < 18 * 60) {
+            if ((deltaT * temps) % 1440 < 18 * 60) {
                 res = REPAS;
             } else {
                 res = TRAVAIL;
@@ -160,7 +162,7 @@ int giveDestination(int typeVE, int positionActuelle, int temps, int deltaT) {
         }
             
         case VE_PARTICULIER: {
-            double heure = ((temps * deltaT) % 86400) / 60.0;
+            double heure = ((temps * deltaT) % 1440) / 60.0;
             if (7.0 <= heure && heure < 11.0) {
                 switch (positionActuelle) {
                     case TRAVAIL:
@@ -216,17 +218,14 @@ Vehicule::Vehicule() {
 }
 
 Vehicule::Vehicule(int deltaT) {
-    // Paramètres variables
-    soc = 80;
-    position = 0; // HOME
+    soc = 100;
     etatMouvActuel = BRANCHE_EN_CHARGE; // BRANCHE_EN_CHARGE
     etatMouvSuivant = BRANCHE_EN_CHARGE; // BRANCHE_EN_CHARGE
     distanceParcourue = 0;
     nbTrajetsEffectues = 0;
     willToCharge = false;
-    
-    // Paramètres constants
     typeVehicule = initType();
+    position = (typeVehicule == VE_PARTICULIER) ? MAISON : TRAVAIL; // HOME
     modele = initModele(typeVehicule);
     capacite = stats_capaciteVehicule[modele];
     vitesse = initVitesse(); // en km/h
@@ -244,10 +243,32 @@ Vehicule::Vehicule(int deltaT) {
         destinations.push_back(newDestination);
         horaireDepart.push_back(nouvelHoraire);
         dernierePosition = newDestination;
-        dernierHoraire = (nouvelHoraire + (int)std::ceil((longueurTrajet / vitesse) * 60 / deltaT)) % 86400;
+        dernierHoraire = (nouvelHoraire + (int)std::ceil((longueurTrajet / vitesse) * 60 / deltaT)) % 1440;
     }
     
     initAccesBornes(accesBornes, typeVehicule);
+    if (!accesBornes[destinations.back()]) { // pour éviter qu'un véhicule n'ait pas de borne en fin de journée
+        nbTrajets++;
+        horaireDepart.push_back(giveDestination(typeVehicule, destinations.back(), horaireDepart.back(), deltaT));
+        switch (typeVehicule) {
+            case VE_ENTREPRISE:
+                destinations.push_back(TRAVAIL);
+                break;
+                
+            case VE_PARTAGE:
+                destinations.push_back(TRAVAIL);
+                break;
+                
+            case VE_PARTICULIER:
+                int p(0);
+                while (!accesBornes[p]) { // on met le premier lieu où il y a une borne
+                    p++;
+                }
+                destinations.push_back(p);
+                break;
+        }
+    }
+    
     computeSocMin(deltaT);
 }
 
@@ -278,8 +299,6 @@ int Vehicule::transition(int temps, int deltaT) {
     int mouv(getEtatMouvActuel());
     
     if (mouv == EN_TRAIN_DE_ROULER) {
-        std::cout << "Distance restante : " << getDistanceRestante() << std::endl;
-        std::cout << "SOC restant : " << getSoc() << std::endl;
         if ((getDistanceRestante() <= 0) || (getSoc() <= 0)) {
             setEtatMouvSuivant(GARE_NON_BRANCHE); // on passe par l'état GARE_NON_BRANCHE avant l'état BRANCHE_* (car deltaT petit)
             computeSocMin(deltaT);
@@ -289,7 +308,7 @@ int Vehicule::transition(int temps, int deltaT) {
             return 0;
         }
     } else {
-        if (getNbTrajets() > getNbTrajetsEffectues() && ((temps * deltaT) % 86400) >= deltaT * getHoraireDepart(getNbTrajetsEffectues())) {
+        if (getNbTrajets() > getNbTrajetsEffectues() && ((temps * deltaT) % 1440) >= deltaT * getHoraireDepart(getNbTrajetsEffectues())) {
             if (getSoc() >= getSocMin()) {
                 setEtatMouvSuivant(EN_TRAIN_DE_ROULER);
                 return 0;
@@ -300,6 +319,7 @@ int Vehicule::transition(int temps, int deltaT) {
         
         if (getEtatMouvActuel() == GARE_NON_BRANCHE) {
             if (!getAccesBornes(getPosition()) || !getWillToCharge()) {
+                std::cout << "J'ai pas de bornes !!! :'(" << std::endl;
                 setEtatMouvSuivant(GARE_NON_BRANCHE);
                 return 0;
             }
@@ -314,7 +334,7 @@ int Vehicule::transition(int temps, int deltaT) {
                 return 0;
             }
         } else {
-            setEtatMouvSuivant(BRANCHE_PAS_EN_CHARGE);
+            setEtatMouvSuivant(smartGrid());
             return 0;
         }
     }
@@ -324,7 +344,7 @@ void Vehicule::simulation(int temps, int deltaT, std::vector<double>& puissanceR
     int mouv(getEtatMouvActuel());
     
     if (mouv == EN_TRAIN_DE_ROULER) {
-        setSoc(std::max(0.0, getSoc() - 100 * (getVitesse() * deltaT/60.0) * (getConsommation() / getCapacite())));
+        setSoc(std::max(0.0, getSoc() - 100.0 * (getVitesse() * deltaT/60.0) * (getConsommation() / getCapacite())));
         setDistanceParcourue(getDistanceParcourue() + std::min(getDistanceRestante(), getVitesse() * deltaT/60.0)); // usage de 'min' pour éviter d'avoir une distance parcourue supérieure à la distance à parcourir initialement
         setDistanceRestante(std::max(0.0, getDistanceRestante() - getVitesse() * deltaT/60.0)); // usage de 'max' pour éviter d'avoir une distance restante négative
     } else if (mouv == BRANCHE_EN_CHARGE && getSoc() < 100) {
@@ -510,7 +530,7 @@ void Vehicule::resetDestinations() {
 
 void Vehicule::reinitJour() {
     // Réinitialisation de certaines variables à minuit
-    setDistanceParcourue(0);
+    setDistanceParcourue(0); // Et si on a un trajet en cours à 00h00 ???
     resetNbTrajetsEffectues();
 }
 

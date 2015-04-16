@@ -24,17 +24,7 @@ vector<double> initPuissanceReseau(int dureeSim) {
     return puissance;
 }
 
-vector<Vehicule> initialisationFlotte(int tailleEchantillon, int deltaT) {
-    vector<Vehicule> flotte;
-    for (int i(0); i < tailleEchantillon; i++) {
-        flotte.push_back(Vehicule(deltaT));
-    }
-    
-    return flotte;
-}
-
 vector<double> modele(int dureeSimulation, int deltaT, int tailleEchantillon) { // dureeSimulation se mesure en deltaT
-    vector<Vehicule> flotte = initialisationFlotte(tailleEchantillon, deltaT);
     vector<double> puissanceReseau = initPuissanceReseau(dureeSimulation);
     
     for (int i(0); i < tailleEchantillon; i++) {
