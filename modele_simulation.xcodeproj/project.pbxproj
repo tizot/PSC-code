@@ -28296,6 +28296,11 @@
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.57.0/include/,
 				);
+				OTHER_CPLUSPLUSFLAGS = (
+					"$(OTHER_CFLAGS)",
+					"-g",
+					"-O0",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -28307,6 +28312,11 @@
 				"HEADER_SEARCH_PATHS[arch=*]" = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.57.0/include/,
+				);
+				OTHER_CPLUSPLUSFLAGS = (
+					"$(OTHER_CFLAGS)",
+					"-g",
+					"-O0",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};

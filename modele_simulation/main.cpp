@@ -16,28 +16,27 @@ using namespace std;
 
 // FONCTIONS
 vector<double> initPuissanceReseau(int dureeSim) {
-    vector<double> puissance;
+    vector<double> puissance(dureeSim);
     for (int i(0); i < dureeSim; i++) {
-        puissance.push_back(0.0);
+        puissance[i] = 0.0;
     }
     
     return puissance;
 }
 
-vector<double> modele(int dureeSimulation, int deltaT, int tailleEchantillon) { // dureeSimulation se mesure en deltaT
-    vector<double> puissanceReseau = initPuissanceReseau(dureeSimulation);
-    
-    for (int i(0); i < tailleEchantillon; i++) {
-        Vehicule *vehicule = new Vehicule(deltaT);
-        int temps(0);
+void modele(int dureeSimulation, int deltaT, int tailleEchantillon, vector<double> &puissanceReseau) { // dureeSimulation se mesure en deltaT
+    //vector<double> puissanceReseau = initPuissanceReseau(dureeSimulation);
+    cout << "Init" << endl;
+    for (int i = 0; i < tailleEchantillon; i++) {
+        cout << "VE " << (i+1) << ". " << endl;
+        Vehicule *vehicule = new Vehicule(deltaT, true);
+        int temps = 0;
         while(temps < dureeSimulation) {
-            vehicule->simulation(temps, deltaT, puissanceReseau);
+            puissanceReseau[temps] += vehicule->simulation(temps, deltaT);
             temps++;
         }
         delete vehicule;
     }
-    
-    return puissanceReseau;
 }
 
 int main(int argc, const char * argv[]) {
@@ -46,11 +45,15 @@ int main(int argc, const char * argv[]) {
         return -1;
     }
     
+    int duree = 1000;
+    int deltaT = 10;
+    int taille = 100;
+    
     try {
-        int deltaT = boost::lexical_cast<int>(argv[1]);
+        deltaT = boost::lexical_cast<int>(argv[1]);
         cout << "deltaT = " << deltaT << " minutes" << endl;
         try {
-            int duree = boost::lexical_cast<int>(argv[2]);
+            duree = boost::lexical_cast<int>(argv[2]);
             int nbJour = duree*deltaT/1440;
             int nbHeure = (duree*deltaT - nbJour*1440) / 60;
             int nbMinute = (duree*deltaT - nbJour*1440 - nbHeure*60);
@@ -59,12 +62,13 @@ int main(int argc, const char * argv[]) {
                 cout << nbJour << " j ";
             cout << nbHeure << " h " << nbMinute << endl;
             try {
-                int taille = boost::lexical_cast<int>(argv[3]);
+                taille = boost::lexical_cast<int>(argv[3]);
                 cout << "Nb de VE = " << taille << endl;
                 
                 cout << endl;
                 
-                vector<double> puissanceReseau = modele(duree, deltaT, taille);
+                vector<double> puissanceReseau(duree, 0.0);
+                modele(duree, deltaT, taille, puissanceReseau);
                 for (int i(0); i < duree; i++) {
                     cout << i << " : " << puissanceReseau[i] << endl;
                 }

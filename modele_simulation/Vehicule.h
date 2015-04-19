@@ -15,7 +15,7 @@
 class Vehicule {
 public:
     Vehicule();
-    Vehicule(int deltaT); // constructeur
+    Vehicule(int deltaT, bool debug); // constructeur
     ~Vehicule();
     
     // Données véhicule (constantes)
@@ -66,7 +66,7 @@ public:
     
     // Fonctions pour le modèle
     int transition(int temps, int deltaT);
-    void simulation(int temps, int deltaT, std::vector<double> &puissanceReseau);
+    double simulation(int temps, int deltaT);
     
 private:
     int typeVehicule; // VEP, VEE, VAP
