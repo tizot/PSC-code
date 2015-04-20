@@ -69,9 +69,8 @@ boost::random::normal_distribution<> distVitesse(38.75, 10.0); // km/h
 boost::random::normal_distribution<> distNbTrajets(2.5, 1);
 
 // Distance d'un trajet
-boost::random::lognormal_distribution<> distDistanceTrajet(12.75, 1.0);
-const double stats_distanceTrajet[7] = {0.13, 0.162, 0.206, 0.242, 0.19, 0.06, 0.011}; // 0-2, 2-5, 5-10, 10-20, 20-40, 40-80, >80 km
-const double stats_distanceMoyenneTrajet(12.75); // km
+boost::random::discrete_distribution<> distDistanceTrajet{0.13, 0.162, 0.206, 0.242, 0.19, 0.06, 0.011};;
+const double stats_distanceTrajet[7] = {2, 5, 10, 20, 40, 80, 150};
 
 // Horaires de départ
 const int classeHoraire[8] = {5, 7, 8, 9, 12, 16, 20, 24}; // max de la classe horaire
@@ -106,6 +105,17 @@ int initModele(int typeVE) {
 
 double initVitesse() {
     return distVitesse(gen);
+}
+
+double initLongueurTrajet() {
+    int classe = distDistanceTrajet(gen);
+    int min_i = 0;
+    if (classe > 0)
+        min_i =  stats_distanceTrajet[classe-1];
+    
+    boost::random::uniform_real_distribution<> longueur(min_i, stats_distanceTrajet[classe]);
+    
+    return longueur(gen);
 }
 
 int initNbTrajets() {
@@ -249,7 +259,7 @@ Vehicule::Vehicule(int deltaT, bool debug) {
     capacite = stats_capaciteVehicule[modele];
     vitesse = initVitesse(); // en km/h
     consommation = capacite / stats_autonomieVehicule[modele];
-    longueurTrajet = 18.3; 
+    longueurTrajet = initLongueurTrajet();
     puissanceCharge = 3.5;
     if (debug)
         std::cout << "\t" << "Constantes terminées : VE de type " << typeVehicule << std::endl;
@@ -268,7 +278,7 @@ Vehicule::Vehicule(int deltaT, bool debug) {
     
     int dernierePosition(position);
     int dernierHoraire(0);
-    bool consistant = false;
+    bool consistant = true;
     if (debug)
         std::cout << "\t" << "Calcul des horaires et destinations" << std::endl;
     do {
@@ -288,11 +298,12 @@ Vehicule::Vehicule(int deltaT, bool debug) {
             dernierePosition = newDestination;
             dernierHoraire = (nouvelHoraire + (int)std::ceil((longueurTrajet / vitesse) * 60 / deltaT)) % (1440/deltaT);
             if ((nouvelHoraire + (int)std::ceil((longueurTrajet / vitesse) * 60 / deltaT)) < 1440 / deltaT)
-                consistant = true;
+                consistant = consistant && true;
             else
                 consistant = false;
         }
-    } while (!consistant || !passeParUneBorne(destinations, accesBornes));
+        std::cout << "Passe par une borne : " << passeParUneBorne(destinations, accesBornes) << std::endl;
+    } while (/*!consistant || */!passeParUneBorne(destinations, accesBornes));
     
     if (debug && !checkOrdreHorairesDepart(horaireDepart))
         std::cout << "INCOHERENCE DANS LES HORAIRES" << std::endl;
@@ -322,8 +333,11 @@ Vehicule::~Vehicule() {
  * smartGrid() 
  * Définit le conmportement smartGrid choisi
  */
-int smartGrid() {
-    return BRANCHE_EN_CHARGE;
+int smartGrid(Vehicule* v) {
+    if (v->getSoc() >= 100)
+        return BRANCHE_PAS_EN_CHARGE;
+    else
+        return BRANCHE_EN_CHARGE;
 }
 
 double puissanceDelivree() {
@@ -367,11 +381,11 @@ int Vehicule::transition(int temps, int deltaT) {
                 setEtatMouvSuivant(BRANCHE_PAS_EN_CHARGE);
                 return 0;
             } else {
-                setEtatMouvSuivant(smartGrid());
+                setEtatMouvSuivant(smartGrid(this));
                 return 0;
             }
         } else {
-            setEtatMouvSuivant(smartGrid());
+            setEtatMouvSuivant(smartGrid(this));
             return 0;
         }
     }
@@ -414,7 +428,7 @@ double Vehicule::simulation(int temps, int deltaT) {
     }
     setEtatMouvActuel(getEtatMouvSuivant());
     
-    return result;
+    return result; // renvoie la puissance demandé à l'instant t par le VE
 }
 
 

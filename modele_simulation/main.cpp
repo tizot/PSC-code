@@ -30,7 +30,8 @@ void modele(int dureeSimulation, int deltaT, int tailleEchantillon, vector<doubl
     //vector<double> puissanceReseau = initPuissanceReseau(dureeSimulation);
     cout << "Init" << endl;
     for (int i = 0; i < tailleEchantillon; i++) {
-        Vehicule *vehicule = new Vehicule(deltaT, false);
+        Vehicule *vehicule = new Vehicule(deltaT, true);
+        cout << "Véhicule " << (i+1) << endl;
         //vehicule->printInfos(deltaT);
         int temps = 0;
         while(temps < dureeSimulation) {
@@ -94,9 +95,12 @@ int main(int argc, const char * argv[]) {
                 
                 try {
                     Gnuplot::set_terminal_std("postscript");
-                    Gnuplot::set_GNUPlotPath("output.png");
                     Gnuplot g1("courbe");
-                    g1.set_title("Puissance horaire");
+                    g1.reset_all();
+                    const string title = "PUISSANCE NECESSAIRE A LA RECHARGE DE " + boost::lexical_cast<std::string>(taille) + " VE";
+                    g1.set_title(title);
+                    g1.set_xlabel("Temps (h)");
+                    g1.set_ylabel("Puissance (kW)");
                     
                     vector<double> x, y;
                     double tps = 0.0;
@@ -106,10 +110,10 @@ int main(int argc, const char * argv[]) {
                         y.push_back(puissanceReseau[i]);
                     }
                     
-                    g1.reset_all();
+                    g1.set_xrange(0.0, 24.0);
+                    //g1.operator<<("set title \"Puissance horaire\"");
                     g1.savetops("puissance");
-                    g1.set_style("points").plot_xy(x, y, "");
-                    g1.showonscreen();
+                    g1.set_style("histeps").plot_xy(x, y, "");
                 } catch (GnuplotException ge) {
                     cout << ge.what() << endl;
                 }

@@ -72,7 +72,7 @@ private:
     int typeVehicule; // VEP, VEE, VAP
     int modele;
     double consommation; // en kWh/km
-    int comportementBranchement; // ???
+    int comportementBranchement; // SMART GRID ???
     double vitesse; // en km/h
     double puissanceCharge;
     double soc;
@@ -81,7 +81,7 @@ private:
     int etatMouvActuel;
     int etatMouvSuivant;
     bool willToCharge;
-    double distanceRestante; // distanceRestante[periode]
+    double distanceRestante;
     double distanceParcourue;
     int position;
     bool accesBornes[3]; // accesBornes[position]
