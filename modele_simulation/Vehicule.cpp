@@ -119,10 +119,7 @@ int initNbTrajets() {
 
 int initHoraireDepart(int deltaT, int minDepart) {
     int depart;
-    int iter = 1;
     do {
-        std::cout << "\t\t\t Iter initHoraireDepart : " << iter << std::endl;
-        iter++;
         // Déterminer la classe
         int classe(distClasseHoraireDepart(gen));
         int tailleClasse(real_mod(classeHoraire[classe] - classeHoraire[real_mod(classe-1, 8)], 24));
@@ -201,13 +198,10 @@ int giveDestination(int typeVE, int positionActuelle, int temps, int deltaT) {
 void initAccesBornes(bool accesBornes[], int typeVE) {
     switch (typeVE) {
         case VE_PARTICULIER: {
-            int iter = 1;
             do { // pour éviter qu'un véhicule n'ait pas de borne du tout
-                std::cout << "\t Iterations pour accesBornes : " << iter << std::endl;
                 accesBornes[MAISON] = distAccesBorneHOME(gen);
                 accesBornes[TRAVAIL] = distAccesBorneWORK(gen);
                 accesBornes[REPAS] = distAccesBorneLUNCH(gen);
-                iter++;
             } while (!(accesBornes[MAISON] || accesBornes[TRAVAIL] || accesBornes[REPAS]));
             break;
         }
@@ -218,6 +212,22 @@ void initAccesBornes(bool accesBornes[], int typeVE) {
             accesBornes[REPAS] = (boost::random::bernoulli_distribution<> (0.5))(gen); // 1 chance sur 2 d'avoir une borne lors d'un déplacement
             break;
     }
+}
+
+bool passeParUneBorne(std::vector<int> &destinations, bool accesBornes[]) {
+    bool res = false;
+    for (int i = 0; i < destinations.size(); i++) {
+        res = res || accesBornes[destinations[i]];
+    }
+    return res;
+}
+
+bool checkOrdreHorairesDepart(std::vector<int> &horairesDepart) {
+    bool res = true;
+    for (int i = 1; i < horairesDepart.size(); i++)
+        res = res && (horairesDepart[i] > horairesDepart[i-1]);
+    
+    return res;
 }
 
 Vehicule::Vehicule() {
@@ -248,59 +258,47 @@ Vehicule::Vehicule(int deltaT, bool debug) {
     nbTrajets = initNbTrajets();
     if (debug)
         std::cout << "\t" << "Nombre trajets. OK" << std::endl;
-    int dernierePosition(position);
-    int dernierHoraire(0);
-    for (int i(0); i < nbTrajets; i++) {
-        int nouvelHoraire = initHoraireDepart(deltaT, dernierHoraire);
-        int newDestination = giveDestination(typeVehicule, dernierePosition, nouvelHoraire, deltaT);
-        destinations.push_back(newDestination);
-        horaireDepart.push_back(nouvelHoraire);
-        dernierePosition = newDestination;
-        dernierHoraire = (nouvelHoraire + (int)std::ceil((longueurTrajet / vitesse) * 60 / deltaT)) % 1440;
-    }
-    if (debug)
-        std::cout << "\t" << "Destinations et horaires départ. OK" << std::endl;
     
     for (int h = 0; h < 3; h++) {
         accesBornes[h] = false;
     }
     initAccesBornes(accesBornes, typeVehicule);
-    if (!accesBornes[destinations.back()]) { // pour éviter qu'un véhicule n'ait pas de borne en fin de journée
-        if (debug)
-            std::cout << "\t" << "Ajustement trajet" << std::endl;
-        nbTrajets++;
-        int horaireMin = horaireDepart.back() + (int) std::ceil((longueurTrajet / vitesse) * (60 / deltaT));
-        horaireDepart.push_back(initHoraireDepart(deltaT, horaireMin));
-        if (debug)
-            std::cout << "\t\t" << "Nouvel horaire" << std::endl;
-        switch (typeVehicule) {
-            case VE_ENTREPRISE:
-                destinations.push_back(TRAVAIL);
-                break;
-                
-            case VE_PARTAGE:
-                destinations.push_back(TRAVAIL);
-                break;
-                
-            case VE_PARTICULIER:
-                int p(0);
-                for (int h = 0; h < 3; h++) {
-                    std::cout << accesBornes[h] << std::endl;
-                }
-                while (!accesBornes[p ]) { // on met le premier lieu où il y a une borne
-                    p++;
-                }
-                destinations.push_back(p);
-                break;
-        }
-        if (debug)
-            std::cout << "\t\t" << "Nouvelle destination" << std::endl;
-    } else {
-        if (debug)
-            std::cout << "\t" << "Trajets OK." << std::endl;
-    }
     if (debug)
         std::cout << "\t" << "Accès bornes. OK" << std::endl;
+    
+    int dernierePosition(position);
+    int dernierHoraire(0);
+    bool consistant = false;
+    if (debug)
+        std::cout << "\t" << "Calcul des horaires et destinations" << std::endl;
+    do {
+        destinations.clear();
+        horaireDepart.clear();
+        for (int i(0); i < nbTrajets; i++) {
+            if (debug)
+                std::cout << "\t\t" << "Couple n°" << (i+1) << " sur " << nbTrajets << std::endl;
+            int nouvelHoraire = initHoraireDepart(deltaT, dernierHoraire);
+            if (debug)
+                std::cout << "\t\t\t" << "Horaire. OK" << std::endl;
+            int newDestination = giveDestination(typeVehicule, dernierePosition, nouvelHoraire, deltaT);
+            if (debug)
+                std::cout << "\t\t\t" << "Destination. OK" << std::endl;
+            destinations.push_back(newDestination);
+            horaireDepart.push_back(nouvelHoraire);
+            dernierePosition = newDestination;
+            dernierHoraire = (nouvelHoraire + (int)std::ceil((longueurTrajet / vitesse) * 60 / deltaT)) % (1440/deltaT);
+            if ((nouvelHoraire + (int)std::ceil((longueurTrajet / vitesse) * 60 / deltaT)) < 1440 / deltaT)
+                consistant = true;
+            else
+                consistant = false;
+        }
+    } while (!consistant || !passeParUneBorne(destinations, accesBornes));
+    
+    if (debug && !checkOrdreHorairesDepart(horaireDepart))
+        std::cout << "INCOHERENCE DANS LES HORAIRES" << std::endl;
+    
+    if (debug)
+        std::cout << "\t" << "Destinations et horaires départ. OK" << std::endl;
     
     computeSocMin(deltaT);
     if (debug) {

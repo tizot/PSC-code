@@ -7,10 +7,12 @@
 //
 
 #include <iostream>
+#include <fstream>
 #include "Vehicule.h"
 #include <vector>
 #include <boost/random.hpp>
 #include <boost/lexical_cast.hpp>
+#include "gnuplot_i.hpp"
 
 using namespace std;
 
@@ -28,8 +30,8 @@ void modele(int dureeSimulation, int deltaT, int tailleEchantillon, vector<doubl
     //vector<double> puissanceReseau = initPuissanceReseau(dureeSimulation);
     cout << "Init" << endl;
     for (int i = 0; i < tailleEchantillon; i++) {
-        cout << "VE " << (i+1) << ". " << endl;
-        Vehicule *vehicule = new Vehicule(deltaT, true);
+        Vehicule *vehicule = new Vehicule(deltaT, false);
+        //vehicule->printInfos(deltaT);
         int temps = 0;
         while(temps < dureeSimulation) {
             puissanceReseau[temps] += vehicule->simulation(temps, deltaT);
@@ -72,7 +74,46 @@ int main(int argc, const char * argv[]) {
                 for (int i(0); i < duree; i++) {
                     cout << i << " : " << puissanceReseau[i] << endl;
                 }
-                cout << endl;
+                cout << endl << "Calculs terminés" << endl;
+                
+                // On exporte le dernier jour entier
+                int index_min = (nbJour-1) * 1440 / deltaT;
+                int index_max = min(nbJour * 1440 / deltaT, duree);
+                ofstream donnees("puissance.dat");
+                
+                if (donnees) {
+                    double tps = 0.0;
+                    for (int i = index_min; i < index_max; i++) {
+                        tps = (((i - index_min) * deltaT) % 1440) / 60.0;
+                        donnees << tps << "\t" << puissanceReseau[i] << endl;
+                    }
+                    cout << "Ecriture terminée" << endl;
+                } else {
+                    cerr << "ERREUR : impossible d'ouvrir le fichier 'puissance.dat'." << endl;
+                }
+                
+                try {
+                    Gnuplot::set_terminal_std("postscript");
+                    Gnuplot::set_GNUPlotPath("output.png");
+                    Gnuplot g1("courbe");
+                    g1.set_title("Puissance horaire");
+                    
+                    vector<double> x, y;
+                    double tps = 0.0;
+                    for (int i = index_min; i < index_max; i++) {
+                        tps = (((i - index_min) * deltaT) % 1440) / 60.0;
+                        x.push_back(tps);
+                        y.push_back(puissanceReseau[i]);
+                    }
+                    
+                    g1.reset_all();
+                    g1.savetops("puissance");
+                    g1.set_style("points").plot_xy(x, y, "");
+                    g1.showonscreen();
+                } catch (GnuplotException ge) {
+                    cout << ge.what() << endl;
+                }
+                
                 
                 cout << "Terminé avec +/- de succès..." << endl;
                 return 0;
