@@ -57,17 +57,17 @@ int main(int argc, const char * argv[]) {
     
     try {
         deltaT = boost::lexical_cast<int>(argv[1]);
-        cout << "deltaT = " << deltaT << " minutes" << endl;
+        cout << "deltaT = " << deltaT << " min" << endl;
     } catch (const boost::bad_lexical_cast &) {
-        cerr << "deltaT doit être un nombre entiers de minutes." << endl;
+        cerr << "deltaT doit être un nombre entier de minutes." << endl;
         cout << "Valeur par défaut utilisée : 10 min." << endl;
     }
     
     try {
         duree = boost::lexical_cast<int>(argv[2]);
-        cout << "Durée = " << duree << " jour(s) ";
+        cout << "Durée = " << duree << " j ";
     } catch (const boost::bad_lexical_cast &) {
-        cerr << "La durée doit être un nombre entiers de deltaT." << endl;
+        cerr << "La durée doit être un nombre entier de jours." << endl;
         cout << "Valeur par défaut utilisée : 2 jours." << endl;
     }
     
@@ -75,7 +75,7 @@ int main(int argc, const char * argv[]) {
         taille = boost::lexical_cast<int>(argv[3]);
         cout << "Nb de VE = " << taille << endl;
     } catch (const boost::bad_lexical_cast &) {
-        cerr << "La taille doit être un nombre entiers de VE." << endl;
+        cerr << "La taille doit être un nombre entier de VE." << endl;
         cout << "Valeur par défaut utilisée : 100." << endl;
     }
     
