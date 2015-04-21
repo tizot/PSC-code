@@ -42,8 +42,6 @@ public:
     void setWillToCharge(bool will);
     double getDistanceRestante();
     void setDistanceRestante(double distance);
-    double getDistanceParcourue();
-    void setDistanceParcourue(double distance);
     int getPosition();
     void setPosition(int pos);
     int getNbTrajetsEffectues();
@@ -82,7 +80,6 @@ private:
     int etatMouvSuivant;
     bool willToCharge;
     double distanceRestante;
-    double distanceParcourue;
     int position;
     bool accesBornes[3]; // accesBornes[position]
     int nbTrajetsEffectues;

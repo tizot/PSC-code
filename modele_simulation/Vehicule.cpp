@@ -59,8 +59,8 @@ boost::random::mt19937 gen((int)time(NULL));
 
 // Disponibilité des bornes de recharge
 boost::random::bernoulli_distribution<> distAccesBorneHOME(0.96); // HOME
-boost::random::bernoulli_distribution<> distAccesBorneWORK(0.33); // WORK
-boost::random::bernoulli_distribution<> distAccesBorneLUNCH(0.14); // LUNCH
+boost::random::bernoulli_distribution<> distAccesBorneWORK(0.75); // WORK
+boost::random::bernoulli_distribution<> distAccesBorneLUNCH(0.74); // LUNCH
 
 // Vitesse moyenne
 boost::random::normal_distribution<> distVitesse(38.75, 10.0); // km/h
@@ -250,7 +250,6 @@ Vehicule::Vehicule(int deltaT, bool debug) {
     soc = 100;
     etatMouvActuel = BRANCHE_EN_CHARGE; // BRANCHE_EN_CHARGE
     etatMouvSuivant = BRANCHE_EN_CHARGE; // BRANCHE_EN_CHARGE
-    distanceParcourue = 0;
     nbTrajetsEffectues = 0;
     willToCharge = true;
     typeVehicule = initType();
@@ -278,7 +277,6 @@ Vehicule::Vehicule(int deltaT, bool debug) {
     
     int dernierePosition(position);
     int dernierHoraire(0);
-    bool consistant = true;
     if (debug)
         std::cout << "\t" << "Calcul des horaires et destinations" << std::endl;
     do {
@@ -297,13 +295,8 @@ Vehicule::Vehicule(int deltaT, bool debug) {
             horaireDepart.push_back(nouvelHoraire);
             dernierePosition = newDestination;
             dernierHoraire = (nouvelHoraire + (int)std::ceil((longueurTrajet / vitesse) * 60 / deltaT)) % (1440/deltaT);
-            if ((nouvelHoraire + (int)std::ceil((longueurTrajet / vitesse) * 60 / deltaT)) < 1440 / deltaT)
-                consistant = consistant && true;
-            else
-                consistant = false;
         }
-        std::cout << "Passe par une borne : " << passeParUneBorne(destinations, accesBornes) << std::endl;
-    } while (/*!consistant || */!passeParUneBorne(destinations, accesBornes));
+    } while (!passeParUneBorne(destinations, accesBornes));
     
     if (debug && !checkOrdreHorairesDepart(horaireDepart))
         std::cout << "INCOHERENCE DANS LES HORAIRES" << std::endl;
@@ -406,7 +399,6 @@ double Vehicule::simulation(int temps, int deltaT) {
     
     if (mouv == EN_TRAIN_DE_ROULER) {
         setSoc(std::max(0.0, getSoc() - 100.0 * (getVitesse() * deltaT/60.0) * (getConsommation() / getCapacite())));
-        setDistanceParcourue(getDistanceParcourue() + std::min(getDistanceRestante(), getVitesse() * deltaT/60.0)); // usage de 'min' pour éviter d'avoir une distance parcourue supérieure à la distance à parcourir initialement
         setDistanceRestante(std::max(0.0, getDistanceRestante() - getVitesse() * deltaT/60.0)); // usage de 'max' pour éviter d'avoir une distance restante négative
     } else if (mouv == BRANCHE_EN_CHARGE && getSoc() < 100) {
         setSoc(std::min(100.0, getSoc() + 100.0 * (deltaT/60.0) * (getPuissanceCharge() / getCapacite()))); //puissanceCharge() fonction qui peut dépendre des paramètres qu'on veut, pour anticiper le smartgrid de ce coté là aussi. // usage de 'min' pour éviter d'avoir un SOC > 100
@@ -502,14 +494,6 @@ void Vehicule::setDistanceRestante(double distance) {
     distanceRestante = distance;
 }
 
-double Vehicule::getDistanceParcourue() {
-    return distanceParcourue;
-}
-
-void Vehicule::setDistanceParcourue(double distance) {
-    distanceParcourue = distance;
-}
-
 int Vehicule::getPosition() {
     return position;
 }
@@ -601,7 +585,6 @@ void Vehicule::setNeedToReset(bool need) {
 
 void Vehicule::reinitJour() {
     // Réinitialisation de certaines variables à minuit
-    setDistanceParcourue(0); // Et si on a un trajet en cours à 00h00 ???
     resetNbTrajetsEffectues();
     setNeedToReset(false);
 }
