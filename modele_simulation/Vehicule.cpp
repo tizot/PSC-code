@@ -248,8 +248,8 @@ Vehicule::Vehicule(int deltaT, bool debug) {
     if (debug)
         std::cout << "Init VE" << std::endl;
     soc = 100;
-    etatMouvActuel = BRANCHE_EN_CHARGE; // BRANCHE_EN_CHARGE
-    etatMouvSuivant = BRANCHE_EN_CHARGE; // BRANCHE_EN_CHARGE
+    etatMouvActuel = BRANCHE_PAS_EN_CHARGE;
+    etatMouvSuivant = BRANCHE_PAS_EN_CHARGE;
     nbTrajetsEffectues = 0;
     willToCharge = true;
     typeVehicule = initType();
