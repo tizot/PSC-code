@@ -108,13 +108,13 @@ int main(int argc, const char * argv[]) {
     
     cout << endl << "Use Case choisi : " << (useCase + 1) << endl << endl;
     
-    const int dureeMinutes = duree * 1440;
-    vector<double> puissanceReseau(dureeMinutes, 0.0);
-    vector<double> puissanceMoyenne(dureeMinutes, 0.0);
+    const int dureeDeltaT = duree * 1440 / deltaT;
+    vector<double> puissanceReseau(dureeDeltaT, 0.0);
+    vector<double> puissanceMoyenne(dureeDeltaT, 0.0);
     for (int j(0); j < iterations; j++) {
         cout << "\033[FItération " << (j+1) << " sur " << boost::lexical_cast<std::string>(iterations) << ".                    \n" << flush;
-        modele(dureeMinutes, deltaT, taille, useCase, puissanceReseau);
-        for (int i(0); i < dureeMinutes; i++) {
+        modele(dureeDeltaT, deltaT, taille, useCase, puissanceReseau);
+        for (int i(0); i < dureeDeltaT; i++) {
             puissanceMoyenne[i] += puissanceReseau[i] / (double)iterations;
             puissanceReseau[i] = 0.0;
         }
