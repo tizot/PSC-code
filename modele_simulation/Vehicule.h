@@ -62,7 +62,6 @@ public:
     bool getAcceptSmartGrid();
     double getDebutSmartGrid();
     bool getAcceptV2G();
-    double getDebutV2G();
     
     // Autres fonctions membres utiles
     bool getNeedToReset();
@@ -103,7 +102,6 @@ private:
     bool acceptSmartGrid;
     bool debutSmartGrid;
     bool acceptV2G;
-    double debutV2G;
 };
 
 #endif /* defined(__modele_simulation__Vehicule__) */

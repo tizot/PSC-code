@@ -231,10 +231,6 @@ boost::random::bernoulli_distribution<> dist_acceptV2G(0.75);
 bool initAcceptV2G() {
     return dist_acceptV2G(gen);
 }
-boost::random::uniform_real_distribution<> dist_debutV2G(0, 3);
-double initDebutV2G() {
-    return dist_debutV2G(gen);
-}
 
 
 // Fonctions de vérification
@@ -277,9 +273,10 @@ Vehicule::Vehicule(int deltaT, bool debug) {
     consommation = capacite / stats_autonomieVehicule[modele];
     longueurTrajet = initLongueurTrajet();
     puissanceCharge = 3.5;
+    acceptSmartGrid = initAcceptSmartGrid();
+    debutSmartGrid = initDebutSmartGrid();
     puissanceV2G = 2.0;
     acceptV2G = initAcceptV2G();
-    debutV2G = initDebutV2G();
     if (debug)
         std::cout << "\t" << "Constantes terminées : VE de type " << typeVehicule << std::endl;
     
@@ -657,10 +654,6 @@ double Vehicule::getDebutSmartGrid() {
 
 bool Vehicule::getAcceptV2G() {
     return acceptV2G;
-}
-
-double Vehicule::getDebutV2G() {
-    return debutV2G;
 }
 
 bool Vehicule::getNeedToReset() {
