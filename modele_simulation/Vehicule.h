@@ -100,7 +100,7 @@ private:
     bool needToReset;
     bool vehiculeToGrid;
     bool acceptSmartGrid;
-    bool debutSmartGrid;
+    double debutSmartGrid;
     bool acceptV2G;
 };
 

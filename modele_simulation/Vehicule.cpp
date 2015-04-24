@@ -12,6 +12,7 @@
 #include <iostream>
 #include <boost/random.hpp>
 #include <boost/random/random_device.hpp>
+#include <boost/lexical_cast.hpp>
 
 // CONSTANTES
 // Etat de mouvement
@@ -223,11 +224,11 @@ bool initAcceptSmartGrid() {
 }
 boost::random::uniform_real_distribution<> dist_debutSmartGrid(0, 3);
 double initDebutSmartGrid() {
-    return dist_debutSmartGrid(gen);
+    return (18.0 + boost::lexical_cast<double>(dist_debutSmartGrid(gen)));
 }
 
 // Vehicle2Grid
-boost::random::bernoulli_distribution<> dist_acceptV2G(0.75);
+boost::random::bernoulli_distribution<> dist_acceptV2G(0.5);
 bool initAcceptV2G() {
     return dist_acceptV2G(gen);
 }
@@ -259,8 +260,7 @@ Vehicule::Vehicule() {
 Vehicule::Vehicule(int deltaT, bool debug) {
     if (debug)
         std::cout << "Init VE" << std::endl;
-    soc = 0;
-    socV2G = 40;
+    soc = 100;
     etatMouvActuel = BRANCHE_PAS_EN_CHARGE;
     etatMouvSuivant = BRANCHE_PAS_EN_CHARGE;
     nbTrajetsEffectues = 0;
@@ -275,8 +275,10 @@ Vehicule::Vehicule(int deltaT, bool debug) {
     puissanceCharge = 3.5;
     acceptSmartGrid = initAcceptSmartGrid();
     debutSmartGrid = initDebutSmartGrid();
-    puissanceV2G = 2.0;
     acceptV2G = initAcceptV2G();
+    puissanceV2G = (acceptV2G) ? 2.0 : 0.0;
+    socV2G = 40;
+    vehiculeToGrid = false; // indique si on fait du V2G actuellement (flag)
     if (debug)
         std::cout << "\t" << "Constantes terminées : VE de type " << typeVehicule << std::endl;
     
@@ -355,21 +357,33 @@ int Vehicule::smartGrid(int temps, int deltaT, int useCase) {
         }
             
         case 1: {
-            if ((18.0 <= heure && heure < 21.0) || getSoc() >= 100)
-                return BRANCHE_PAS_EN_CHARGE;
-            else
-                return BRANCHE_EN_CHARGE;
+            if (getAcceptSmartGrid()) {
+                if ((getDebutSmartGrid() <= heure && heure < (getDebutSmartGrid() + 3.0)) || getSoc() >= 100)
+                    return BRANCHE_PAS_EN_CHARGE;
+                else
+                    return BRANCHE_EN_CHARGE;
+            } else
+                return smartGrid(temps, deltaT, 0);
         }
             
         case 2: {
-            setVehiculeToGrid(false);
-            if (18.0 <= heure && heure < 21.0) {
-                if (getSoc() >= getSocMin())
-                    setVehiculeToGrid(true);
-                return BRANCHE_PAS_EN_CHARGE;
+            if (getAcceptSmartGrid()) {
+                if (getAcceptV2G()) {
+                    setVehiculeToGrid(false);
+                    if (getDebutSmartGrid() <= heure && heure < (getDebutSmartGrid() + 3.0)) {
+                        if (getSoc() >= getSocMin() && getSoc() > getSocV2G())
+                            setVehiculeToGrid(true);
+                        return BRANCHE_PAS_EN_CHARGE;
+                    }
+                    else
+                        return BRANCHE_EN_CHARGE;
+                } else {
+                    return smartGrid(temps, deltaT, 1);
+                }
+            } else {
+                return smartGrid(temps, deltaT, 0);
             }
-            else
-                return BRANCHE_EN_CHARGE;
+            
         }
             
         default:
@@ -377,12 +391,7 @@ int Vehicule::smartGrid(int temps, int deltaT, int useCase) {
     }	
 }
 
-double puissanceDelivree() {
-    return 3.5;
-}
-
 int Vehicule::transition(int temps, int deltaT, int useCase) {
-    //std::cout << "Transition " << temps << ". ";
     int mouv(getEtatMouvActuel());
     
     if (mouv == EN_TRAIN_DE_ROULER) {
@@ -413,18 +422,8 @@ int Vehicule::transition(int temps, int deltaT, int useCase) {
             }
         }
         
-        if (getEtatMouvActuel() == BRANCHE_EN_CHARGE) {
-            if (getSoc() >= 100) {
-                setEtatMouvSuivant(BRANCHE_PAS_EN_CHARGE);
-                return 0;
-            } else {
-                setEtatMouvSuivant(smartGrid(temps, deltaT, useCase));
-                return 0;
-            }
-        } else {
-            setEtatMouvSuivant(smartGrid(temps, deltaT, useCase));
-            return 0;
-        }
+        setEtatMouvSuivant(smartGrid(temps, deltaT, useCase));
+        return 0;
     }
 }
 
@@ -447,10 +446,8 @@ double Vehicule::simulation(int temps, int deltaT, int useCase) {
     } else if (mouv == BRANCHE_EN_CHARGE && getSoc() < 100) {
         setSoc(std::min(100.0, getSoc() + 100.0 * (deltaT/60.0) * (getPuissanceCharge() / getCapacite()))); //puissanceCharge() fonction qui peut dépendre des paramètres qu'on veut, pour anticiper le smartgrid de ce coté là aussi. // usage de 'min' pour éviter d'avoir un SOC > 100
         result = getPuissanceCharge();
-    }
-    
-    if(getVehiculeToGrid()) {
-        if (getSoc() > getSocV2G()) {
+    } else if(mouv == BRANCHE_PAS_EN_CHARGE) {
+        if (getVehiculeToGrid()) {
             setSoc(getSoc() - getPuissanceV2G() * deltaT / 60.0);
             result = -getPuissanceV2G();
         } else {
