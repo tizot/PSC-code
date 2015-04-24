@@ -57,27 +57,11 @@ int real_mod(int n, int p) {
 // Générateur aléatoire
 boost::random::mt19937 gen((int)time(NULL));
 
-// Disponibilité des bornes de recharge
-boost::random::bernoulli_distribution<> distAccesBorneHOME(0.96); // HOME
-boost::random::bernoulli_distribution<> distAccesBorneWORK(0.75); // WORK
-boost::random::bernoulli_distribution<> distAccesBorneLUNCH(0.74); // LUNCH
-
-// Vitesse moyenne
-boost::random::normal_distribution<> distVitesse(38.75, 10.0); // km/h
-
-// Nombre de trajets par jour
-boost::random::normal_distribution<> distNbTrajets(2.5, 1);
-
-// Distance d'un trajet
-boost::random::discrete_distribution<> distDistanceTrajet{0.13, 0.162, 0.206, 0.242, 0.19, 0.06, 0.011};;
-const double stats_distanceTrajet[7] = {2, 5, 10, 20, 40, 80, 150};
-
-// Horaires de départ
-const int classeHoraire[8] = {5, 7, 8, 9, 12, 16, 20, 24}; // max de la classe horaire
-boost::random::discrete_distribution<> distClasseHoraireDepart{0.01, 0.15, 0.31, 0.34, 0.13, 0.3, 0.2, 0.01};
-
 // Type de véhicule (VEP, VEE, VAP)
 boost::random::discrete_distribution<> distType{70, 20, 10};
+int initType() {
+    return distType(gen);
+}
 
 // Modèle du véhicule
 boost::random::discrete_distribution<> distModele{0.6389, 0.18, 0, 0.0573, 0.0161};
@@ -85,12 +69,6 @@ const double stats_puissanceVehicule[NB_MODELE] = {65, 80, 50, 55, 222}; // kW
 const double stats_capaciteVehicule[NB_MODELE] = {22, 24, 30, 17.6, 60}; // kWh
 const double stats_autonomieVehicule[NB_MODELE] = {125, 150, 200, 100, 370}; // km
 const double stats_tempsRechargeVehicule[NB_MODELE] = {6, 8, 6, 7, 3}; // h
-
-// Fonctions de détermination des variables issues de données statistiques
-int initType() {
-    return distType(gen);
-}
-
 int initModele(int typeVE) {
     switch (typeVE) {
         case VE_PARTAGE:
@@ -103,10 +81,49 @@ int initModele(int typeVE) {
     }
 }
 
+// Disponibilité des bornes de recharge
+boost::random::bernoulli_distribution<> distAccesBorneHOME(0.96); // HOME
+boost::random::bernoulli_distribution<> distAccesBorneWORK(0.33); // WORK
+boost::random::bernoulli_distribution<> distAccesBorneLUNCH(0.14); // LUNCH
+void initAccesBornes(bool accesBornes[], int typeVE) {
+    switch (typeVE) {
+        case VE_PARTICULIER: {
+            do { // pour éviter qu'un véhicule n'ait pas de borne du tout
+                accesBornes[MAISON] = distAccesBorneHOME(gen);
+                accesBornes[TRAVAIL] = distAccesBorneWORK(gen);
+                accesBornes[REPAS] = distAccesBorneLUNCH(gen);
+            } while (!(accesBornes[MAISON] || accesBornes[TRAVAIL] || accesBornes[REPAS]));
+            break;
+        }
+            
+        default:
+            accesBornes[MAISON] = false; // VEE et VAP n'ont pas de maison
+            accesBornes[TRAVAIL] = true; // Ils sont toujours des bornes de recharge (AutoLib' ou locaux de l'entreprise)
+            accesBornes[REPAS] = (boost::random::bernoulli_distribution<> (0.5))(gen); // 1 chance sur 2 d'avoir une borne lors d'un déplacement
+            break;
+    }
+}
+
+// Vitesse moyenne
+boost::random::normal_distribution<> distVitesse(38.75, 10.0); // km/h
 double initVitesse() {
     return distVitesse(gen);
 }
 
+// Nombre de trajets par jour
+boost::random::normal_distribution<> distNbTrajets(2.5, 1);
+int initNbTrajets() {
+    int nbTrajets = 0;
+    while (nbTrajets <= 0) {
+        nbTrajets = std::floor(distNbTrajets(gen));
+    }
+    
+    return nbTrajets;
+}
+
+// Distance d'un trajet
+boost::random::discrete_distribution<> distDistanceTrajet{0.13, 0.162, 0.206, 0.242, 0.19, 0.06, 0.011};;
+const double stats_distanceTrajet[7] = {2, 5, 10, 20, 40, 80, 150};
 double initLongueurTrajet() {
     int classe = distDistanceTrajet(gen);
     int min_i = 0;
@@ -118,15 +135,9 @@ double initLongueurTrajet() {
     return longueur(gen);
 }
 
-int initNbTrajets() {
-    int nbTrajets = 0;
-    while (nbTrajets <= 0) {
-        nbTrajets = std::floor(distNbTrajets(gen));
-    }
-    
-    return nbTrajets;
-}
-
+// Horaires de départ
+const int classeHoraire[8] = {5, 7, 8, 9, 12, 16, 20, 24}; // max de la classe horaire
+boost::random::discrete_distribution<> distClasseHoraireDepart{0.01, 0.15, 0.31, 0.34, 0.13, 0.3, 0.2, 0.01};
 int initHoraireDepart(int deltaT, int minDepart) {
     int depart;
     do {
@@ -205,25 +216,8 @@ int giveDestination(int typeVE, int positionActuelle, int temps, int deltaT) {
     return res;
 }
 
-void initAccesBornes(bool accesBornes[], int typeVE) {
-    switch (typeVE) {
-        case VE_PARTICULIER: {
-            do { // pour éviter qu'un véhicule n'ait pas de borne du tout
-                accesBornes[MAISON] = distAccesBorneHOME(gen);
-                accesBornes[TRAVAIL] = distAccesBorneWORK(gen);
-                accesBornes[REPAS] = distAccesBorneLUNCH(gen);
-            } while (!(accesBornes[MAISON] || accesBornes[TRAVAIL] || accesBornes[REPAS]));
-            break;
-        }
-            
-        default:
-            accesBornes[MAISON] = false; // VEE et VAP n'ont pas de maison
-            accesBornes[TRAVAIL] = true; // Ils sont toujours des bornes de recharge (AutoLib' ou locaux de l'entreprise)
-            accesBornes[REPAS] = (boost::random::bernoulli_distribution<> (0.5))(gen); // 1 chance sur 2 d'avoir une borne lors d'un déplacement
-            break;
-    }
-}
 
+// Fonctions de vérification
 bool passeParUneBorne(std::vector<int> &destinations, bool accesBornes[]) {
     bool res = false;
     for (int i = 0; i < destinations.size(); i++) {
@@ -240,6 +234,8 @@ bool checkOrdreHorairesDepart(std::vector<int> &horairesDepart) {
     return res;
 }
 
+
+// Constructeur
 Vehicule::Vehicule() {
     //
 }
@@ -248,6 +244,7 @@ Vehicule::Vehicule(int deltaT, bool debug) {
     if (debug)
         std::cout << "Init VE" << std::endl;
     soc = 100;
+    socV2G = 40;
     etatMouvActuel = BRANCHE_PAS_EN_CHARGE;
     etatMouvSuivant = BRANCHE_PAS_EN_CHARGE;
     nbTrajetsEffectues = 0;
@@ -260,6 +257,7 @@ Vehicule::Vehicule(int deltaT, bool debug) {
     consommation = capacite / stats_autonomieVehicule[modele];
     longueurTrajet = initLongueurTrajet();
     puissanceCharge = 3.5;
+    puissanceV2G = 2.0;
     if (debug)
         std::cout << "\t" << "Constantes terminées : VE de type " << typeVehicule << std::endl;
     
@@ -311,6 +309,7 @@ Vehicule::Vehicule(int deltaT, bool debug) {
     }
 }
 
+// Destructeur
 Vehicule::~Vehicule() {
     //
 }
@@ -326,18 +325,44 @@ Vehicule::~Vehicule() {
  * smartGrid() 
  * Définit le conmportement smartGrid choisi
  */
-int smartGrid(Vehicule* v) {
-    if (v->getSoc() >= 100)
-        return BRANCHE_PAS_EN_CHARGE;
-    else
-        return BRANCHE_EN_CHARGE;
+int Vehicule::smartGrid(int temps, int deltaT, int useCase) {
+    double heure = ((temps * deltaT) % 1440) / 60.0;
+    switch (useCase) {
+        case 0: {
+            if (getSoc() >= 100)
+                return BRANCHE_PAS_EN_CHARGE;
+            else
+                return BRANCHE_EN_CHARGE;
+        }
+            
+        case 1: {
+            if ((18.0 <= heure && heure < 21.0) || getSoc() >= 100)
+                return BRANCHE_PAS_EN_CHARGE;
+            else
+                return BRANCHE_EN_CHARGE;
+        }
+            
+        case 2: {
+            setVehiculeToGrid(false);
+            if (18.0 <= heure && heure < 21.0) {
+                if (getSoc() >= getSocMin())
+                    setVehiculeToGrid(true);
+                return BRANCHE_PAS_EN_CHARGE;
+            }
+            else
+                return BRANCHE_EN_CHARGE;
+        }
+            
+        default:
+            return -1;
+    }	
 }
 
 double puissanceDelivree() {
     return 3.5;
 }
 
-int Vehicule::transition(int temps, int deltaT) {
+int Vehicule::transition(int temps, int deltaT, int useCase) {
     //std::cout << "Transition " << temps << ". ";
     int mouv(getEtatMouvActuel());
     
@@ -374,17 +399,17 @@ int Vehicule::transition(int temps, int deltaT) {
                 setEtatMouvSuivant(BRANCHE_PAS_EN_CHARGE);
                 return 0;
             } else {
-                setEtatMouvSuivant(smartGrid(this));
+                setEtatMouvSuivant(smartGrid(temps, deltaT, useCase));
                 return 0;
             }
         } else {
-            setEtatMouvSuivant(smartGrid(this));
+            setEtatMouvSuivant(smartGrid(temps, deltaT, useCase));
             return 0;
         }
     }
 }
 
-double Vehicule::simulation(int temps, int deltaT) {
+double Vehicule::simulation(int temps, int deltaT, int useCase) {
     double result = 0.0;
     //std::cout << "Simulation " << temps << ". ";
     if (temps > 0 && (temps * deltaT) % 1440 == 0) {
@@ -402,10 +427,19 @@ double Vehicule::simulation(int temps, int deltaT) {
         setDistanceRestante(std::max(0.0, getDistanceRestante() - getVitesse() * deltaT/60.0)); // usage de 'max' pour éviter d'avoir une distance restante négative
     } else if (mouv == BRANCHE_EN_CHARGE && getSoc() < 100) {
         setSoc(std::min(100.0, getSoc() + 100.0 * (deltaT/60.0) * (getPuissanceCharge() / getCapacite()))); //puissanceCharge() fonction qui peut dépendre des paramètres qu'on veut, pour anticiper le smartgrid de ce coté là aussi. // usage de 'min' pour éviter d'avoir un SOC > 100
-        result =getPuissanceCharge();
+        result = getPuissanceCharge();
     }
     
-    transition(temps, deltaT);
+    if(getVehiculeToGrid()) {
+        if (getSoc() > getSocV2G()) {
+            setSoc(getSoc() - getPuissanceV2G() * deltaT / 60.0);
+            result = -getPuissanceV2G();
+        } else {
+            result = 0.0;
+        }
+    }
+    
+    transition(temps, deltaT, useCase);
     
     int mouvSuiv(getEtatMouvSuivant());
     
@@ -459,6 +493,10 @@ void Vehicule::computeSocMin(int deltaT) {
     } else {
         socMin = socMin - 100 * (deltaT/60.0) * getVitesse() * getConsommation() / getCapacite();
     }
+}
+
+double Vehicule::getSocV2G() {
+    return socV2G;
 }
 
 
@@ -558,6 +596,10 @@ double Vehicule::getPuissanceCharge() {
     return puissanceCharge;
 }
 
+double Vehicule::getPuissanceV2G() {
+    return puissanceV2G;
+}
+
 int Vehicule::getDestination(int numTrajet) {
     return destinations[numTrajet];
 }
@@ -573,6 +615,14 @@ void Vehicule::addDestination(int position) {
 void Vehicule::resetDestinations() {
     std::vector<int> newDest;
     destinations = newDest;
+}
+
+bool Vehicule::getVehiculeToGrid() {
+    return vehiculeToGrid;
+}
+
+void Vehicule::setVehiculeToGrid(bool v2g) {
+    vehiculeToGrid = v2g;
 }
 
 bool Vehicule::getNeedToReset() {

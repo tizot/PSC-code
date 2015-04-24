@@ -24,6 +24,7 @@ public:
     double getConsommation();
     double getVitesse();
     double getPuissanceCharge();
+    double getPuissanceV2G();
     double getCapacite();
     bool getAccesBornes(int borne);
     void setAccesBornes(int borne, bool acces);
@@ -34,6 +35,7 @@ public:
     void setSoc(double newSoc);
     double getSocMin();
     void computeSocMin(int deltaT);
+    double getSocV2G();
     int getEtatMouvActuel();
     void setEtatMouvActuel(int mouv);
     int getEtatMouvSuivant();
@@ -55,6 +57,8 @@ public:
     int getProchaineDestination();
     void addDestination(int position);
     void resetDestinations();
+    bool getVehiculeToGrid();
+    void setVehiculeToGrid(bool v2g);
     
     // Autres fonctions membres utiles
     bool getNeedToReset();
@@ -63,8 +67,9 @@ public:
     void printInfos(int deltaT) const;
     
     // Fonctions pour le modèle
-    int transition(int temps, int deltaT);
-    double simulation(int temps, int deltaT);
+    int transition(int temps, int deltaT, int useCase);
+    double simulation(int temps, int deltaT, int useCase);
+    int smartGrid(int temps, int deltaT, int useCase);
     
 private:
     int typeVehicule; // VEP, VEE, VAP
@@ -73,8 +78,10 @@ private:
     int comportementBranchement; // SMART GRID ???
     double vitesse; // en km/h
     double puissanceCharge;
+    double puissanceV2G;
     double soc;
     double socMin;
+    double socV2G;
     double capacite; // en kWh
     int etatMouvActuel;
     int etatMouvSuivant;
@@ -88,6 +95,7 @@ private:
     std::vector<int> destinations;
     std::vector<int> horaireDepart; // utilisation horaireDepart[nbTrajetsJournee]
     bool needToReset;
+    bool vehiculeToGrid;
 };
 
 #endif /* defined(__modele_simulation__Vehicule__) */

@@ -26,7 +26,7 @@ vector<double> initPuissanceReseau(int dureeSim) {
     return puissance;
 }
 
-void modele(int dureeSimulation, int deltaT, int tailleEchantillon, vector<double> &puissanceReseau) { // dureeSimulation se mesure en deltaT
+void modele(int dureeSimulation, int deltaT, int tailleEchantillon, int useCase, vector<double> &puissanceReseau) { // dureeSimulation se mesure en deltaT
     //cout << "Init" << endl;
     for (int i = 0; i < tailleEchantillon; i++) {
         cout << "Véhicule " << (i+1) << " sur " << boost::lexical_cast<std::string>(tailleEchantillon) << ".          \r" << flush;
@@ -35,7 +35,7 @@ void modele(int dureeSimulation, int deltaT, int tailleEchantillon, vector<doubl
         //vehicule->printInfos(deltaT);
         int temps = 0;
         while(temps < dureeSimulation) {
-            puissanceReseau[temps] += vehicule->simulation(temps, deltaT);
+            puissanceReseau[temps] += vehicule->simulation(temps, deltaT, useCase);
             temps++;
         }
         delete vehicule;
@@ -65,7 +65,7 @@ int main(int argc, const char * argv[]) {
     
     try {
         duree = boost::lexical_cast<int>(argv[2]);
-        cout << "Durée = " << duree << " j ";
+        cout << "Durée = " << duree << " j " << endl;
     } catch (const boost::bad_lexical_cast &) {
         cerr << "La durée doit être un nombre entier de jours." << endl;
         cout << "Valeur par défaut utilisée : 2 jours." << endl;
@@ -87,16 +87,35 @@ int main(int argc, const char * argv[]) {
         cout << "Valeur par défaut utilisée : 10." << endl;
     }
     
-    cout << endl << endl;
+    cout << endl;
+    
+    cout << "Choisir un Use Case : \n";
+    cout << "  1. Pas de SmartGrid : on charge tant qu'on peut et on ne s'arrête que quand le véhicule est complètement chargé.\n";
+    cout << "  2. On ne recharge pas entre 18h et 21h.\n";
+    cout << "  3. On ne recharge pas entre 18h et 21h et on fait du Vehicle2Grid.";
+    cout << endl << "Votre choix : ";
+    
+    string useCase_str;
+    int useCase;
+    cin >> useCase_str;
+    try {
+        useCase = boost::lexical_cast<int>(useCase_str) - 1;
+        if (useCase < 0 || useCase > 2)
+            useCase = 0;
+    } catch (const boost::bad_lexical_cast &) {
+        useCase = 0;
+    }
+    
+    cout << endl << "Use Case choisi : " << (useCase + 1) << endl << endl;
     
     const int dureeMinutes = duree * 1440;
     vector<double> puissanceReseau(dureeMinutes, 0.0);
     vector<double> puissanceMoyenne(dureeMinutes, 0.0);
     for (int j(0); j < iterations; j++) {
         cout << "\033[FItération " << (j+1) << " sur " << boost::lexical_cast<std::string>(iterations) << ".                    \n" << flush;
-        modele(dureeMinutes, deltaT, taille, puissanceReseau);
+        modele(dureeMinutes, deltaT, taille, useCase, puissanceReseau);
         for (int i(0); i < dureeMinutes; i++) {
-            puissanceMoyenne[i] += puissanceReseau[i] / 100.0;
+            puissanceMoyenne[i] += puissanceReseau[i] / (double)iterations;
             puissanceReseau[i] = 0.0;
         }
     }
@@ -104,9 +123,10 @@ int main(int argc, const char * argv[]) {
     cout << endl << "Calculs terminés" << endl;
     
     // On exporte le dernier jour entier
+    string fileName = "courbe_deltaT" + boost::lexical_cast<std::string>(deltaT) + "_duree" + boost::lexical_cast<std::string>(duree) + "_taille" + boost::lexical_cast<std::string>(taille) + "_iterations" + boost::lexical_cast<std::string>(iterations) + "_usecase" + useCase_str + "";
     int index_min = (duree-1) * 1440 / deltaT;
     int index_max = duree * 1440 / deltaT;
-    ofstream donnees("puissance.dat");
+    ofstream donnees(fileName + ".csv");
     
     if (donnees) {
         double tps = 0.0;
@@ -137,7 +157,7 @@ int main(int argc, const char * argv[]) {
         }
         
         g1.set_xrange(0.0, 24.0);
-        g1.savetops("puissance");
+        g1.savetops(fileName);
         g1.set_style("histeps").plot_xy(x, y, "");
         
         cout << endl << "Graphique terminé" << endl;
