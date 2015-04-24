@@ -275,7 +275,7 @@ Vehicule::Vehicule(int deltaT, bool debug) {
     puissanceCharge = 3.5;
     acceptSmartGrid = initAcceptSmartGrid();
     debutSmartGrid = initDebutSmartGrid();
-    acceptV2G = initAcceptV2G();
+    acceptV2G = (acceptSmartGrid) ? initAcceptV2G() : false;
     puissanceV2G = (acceptV2G) ? 2.0 : 0.0;
     socV2G = 40;
     vehiculeToGrid = false; // indique si on fait du V2G actuellement (flag)
