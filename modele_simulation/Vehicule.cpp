@@ -216,6 +216,16 @@ int giveDestination(int typeVE, int positionActuelle, int temps, int deltaT) {
     return res;
 }
 
+// SmartGrid
+boost::random::bernoulli_distribution<> dist_acceptSmartGrid(0.75);
+bool initAcceptSmartGrid() {
+    return dist_acceptSmartGrid(gen);
+}
+boost::random::uniform_real_distribution<> dist_debutSmartGrid(0, 3);
+double initDebutSmartGrid() {
+    return dist_debutSmartGrid(gen);
+}
+
 // Vehicle2Grid
 boost::random::bernoulli_distribution<> dist_acceptV2G(0.75);
 bool initAcceptV2G() {
@@ -223,7 +233,7 @@ bool initAcceptV2G() {
 }
 boost::random::uniform_real_distribution<> dist_debutV2G(0, 3);
 double initDebutV2G() {
-    return 18.0 + dist_debutV2G(gen);
+    return dist_debutV2G(gen);
 }
 
 
@@ -635,6 +645,22 @@ bool Vehicule::getVehiculeToGrid() {
 
 void Vehicule::setVehiculeToGrid(bool v2g) {
     vehiculeToGrid = v2g;
+}
+
+bool Vehicule::getAcceptSmartGrid() {
+    return acceptSmartGrid;
+}
+
+double Vehicule::getDebutSmartGrid() {
+    return debutSmartGrid;
+}
+
+bool Vehicule::getAcceptV2G() {
+    return acceptV2G;
+}
+
+double Vehicule::getDebutV2G() {
+    return debutV2G;
 }
 
 bool Vehicule::getNeedToReset() {

@@ -59,6 +59,8 @@ public:
     void resetDestinations();
     bool getVehiculeToGrid();
     void setVehiculeToGrid(bool v2g);
+    bool getAcceptSmartGrid();
+    double getDebutSmartGrid();
     bool getAcceptV2G();
     double getDebutV2G();
     
@@ -98,6 +100,8 @@ private:
     std::vector<int> horaireDepart; // utilisation horaireDepart[nbTrajetsJournee]
     bool needToReset;
     bool vehiculeToGrid;
+    bool acceptSmartGrid;
+    bool debutSmartGrid;
     bool acceptV2G;
     double debutV2G;
 };
