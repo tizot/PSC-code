@@ -59,6 +59,8 @@ public:
     void resetDestinations();
     bool getVehiculeToGrid();
     void setVehiculeToGrid(bool v2g);
+    bool getAcceptV2G();
+    double getDebutV2G();
     
     // Autres fonctions membres utiles
     bool getNeedToReset();
@@ -96,6 +98,8 @@ private:
     std::vector<int> horaireDepart; // utilisation horaireDepart[nbTrajetsJournee]
     bool needToReset;
     bool vehiculeToGrid;
+    bool acceptV2G;
+    double debutV2G;
 };
 
 #endif /* defined(__modele_simulation__Vehicule__) */

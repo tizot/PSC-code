@@ -216,6 +216,16 @@ int giveDestination(int typeVE, int positionActuelle, int temps, int deltaT) {
     return res;
 }
 
+// Vehicle2Grid
+boost::random::bernoulli_distribution<> dist_acceptV2G(0.75);
+bool initAcceptV2G() {
+    return dist_acceptV2G(gen);
+}
+boost::random::uniform_real_distribution<> dist_debutV2G(0, 3);
+double initDebutV2G() {
+    return 18.0 + dist_debutV2G(gen);
+}
+
 
 // Fonctions de vérification
 bool passeParUneBorne(std::vector<int> &destinations, bool accesBornes[]) {
@@ -243,7 +253,7 @@ Vehicule::Vehicule() {
 Vehicule::Vehicule(int deltaT, bool debug) {
     if (debug)
         std::cout << "Init VE" << std::endl;
-    soc = 100;
+    soc = 0;
     socV2G = 40;
     etatMouvActuel = BRANCHE_PAS_EN_CHARGE;
     etatMouvSuivant = BRANCHE_PAS_EN_CHARGE;
@@ -258,6 +268,8 @@ Vehicule::Vehicule(int deltaT, bool debug) {
     longueurTrajet = initLongueurTrajet();
     puissanceCharge = 3.5;
     puissanceV2G = 2.0;
+    acceptV2G = initAcceptV2G();
+    debutV2G = initDebutV2G();
     if (debug)
         std::cout << "\t" << "Constantes terminées : VE de type " << typeVehicule << std::endl;
     
