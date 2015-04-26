@@ -123,10 +123,17 @@ int main(int argc, const char * argv[]) {
     cout << endl << "Calculs terminés" << endl;
 
     // On exporte le dernier jour entier
-    string fileName = "courbe_deltaT" + boost::lexical_cast<std::string>(deltaT) + "_duree" + boost::lexical_cast<std::string>(duree) + "_taille" + boost::lexical_cast<std::string>(taille) + "_iterations" + boost::lexical_cast<std::string>(iterations) + "_usecase" + useCase_str + "";
+    string fileName = "courbe_deltaT" + boost::lexical_cast<std::string>(deltaT) + "_duree" 
++ 
+boost::lexical_cast<std::string>(duree) + "_taille" + 
+boost::lexical_cast<std::string>(taille) + "_iterations" + 
+boost::lexical_cast<std::string>(iterations) + "_usecase" + useCase_str + "";
     int index_min = (duree-1) * 1440 / deltaT;
     int index_max = duree * 1440 / deltaT;
-    ofstream donnees(fileName + ".csv");
+    string fileNameC = fileName + ".csv";
+    const char *fileName2;
+    fileName2 = fileNameC.c_str();
+    ofstream donnees(fileName2);
 
     if (donnees) {
         double tps = 0.0;

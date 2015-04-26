@@ -59,13 +59,13 @@ int real_mod(int n, int p) {
 boost::random::mt19937 gen((int)time(NULL));
 
 // Type de véhicule (VEP, VEE, VAP)
-boost::random::discrete_distribution<> distType{70, 20, 10};
+boost::random::discrete_distribution<> distType(70, 20, 10);
 int initType() {
     return distType(gen);
 }
 
 // Modèle du véhicule
-boost::random::discrete_distribution<> distModele{0.6389, 0.18, 0, 0.0573, 0.0161};
+boost::random::discrete_distribution<> distModele(0.6389, 0.18, 0, 0.0573, 0.0161);
 const double stats_puissanceVehicule[NB_MODELE] = {65, 80, 50, 55, 222}; // kW
 const double stats_capaciteVehicule[NB_MODELE] = {22, 24, 30, 17.6, 60}; // kWh
 const double stats_autonomieVehicule[NB_MODELE] = {125, 150, 200, 100, 370}; // km
@@ -123,7 +123,7 @@ int initNbTrajets() {
 }
 
 // Distance d'un trajet
-boost::random::discrete_distribution<> distDistanceTrajet{0.13, 0.162, 0.206, 0.242, 0.19, 0.06, 0.011};;
+boost::random::discrete_distribution<> distDistanceTrajet(0.13, 0.162, 0.206, 0.242, 0.19, 0.06, 0.011);
 const double stats_distanceTrajet[7] = {2, 5, 10, 20, 40, 80, 150};
 double initLongueurTrajet() {
     int classe = distDistanceTrajet(gen);
@@ -138,7 +138,7 @@ double initLongueurTrajet() {
 
 // Horaires de départ
 const int classeHoraire[8] = {5, 7, 8, 9, 12, 16, 20, 24}; // max de la classe horaire
-boost::random::discrete_distribution<> distClasseHoraireDepart{0.01, 0.15, 0.31, 0.34, 0.13, 0.3, 0.2, 0.01};
+boost::random::discrete_distribution<> distClasseHoraireDepart(0.01, 0.15, 0.31, 0.34, 0.13, 0.3, 0.2, 0.01);
 int initHoraireDepart(int deltaT, int minDepart) {
     int depart;
     do {
