@@ -22,7 +22,7 @@ vector<double> initPuissanceReseau(int dureeSim) {
     for (int i(0); i < dureeSim; i++) {
         puissance[i] = 0.0;
     }
-    
+
     return puissance;
 }
 
@@ -49,12 +49,12 @@ int main(int argc, const char * argv[]) {
         cout << "Usage : modele_simulation deltaT(min) duree(j) taille iterations" << endl;
         return -1;
     }
-    
+
     int duree = 2; // en jours
     int deltaT = 10; // in minutes
     int taille = 100;
     int iterations = 10;
-    
+
     try {
         deltaT = boost::lexical_cast<int>(argv[1]);
         cout << "deltaT = " << deltaT << " min" << endl;
@@ -62,7 +62,7 @@ int main(int argc, const char * argv[]) {
         cerr << "deltaT doit être un nombre entier de minutes." << endl;
         cout << "Valeur par défaut utilisée : 10 min." << endl;
     }
-    
+
     try {
         duree = boost::lexical_cast<int>(argv[2]);
         cout << "Durée = " << duree << " j " << endl;
@@ -70,7 +70,7 @@ int main(int argc, const char * argv[]) {
         cerr << "La durée doit être un nombre entier de jours." << endl;
         cout << "Valeur par défaut utilisée : 2 jours." << endl;
     }
-    
+
     try {
         taille = boost::lexical_cast<int>(argv[3]);
         cout << "Nb de VE = " << taille << endl;
@@ -78,7 +78,7 @@ int main(int argc, const char * argv[]) {
         cerr << "La taille doit être un nombre entier de VE." << endl;
         cout << "Valeur par défaut utilisée : 100." << endl;
     }
-    
+
     try {
         iterations = boost::lexical_cast<int>(argv[4]);
         cout << "Nb d'itérations = " << iterations << endl;
@@ -86,15 +86,15 @@ int main(int argc, const char * argv[]) {
         cerr << "Le nombre d'itérations doit être un entier strictement positif." << endl;
         cout << "Valeur par défaut utilisée : 10." << endl;
     }
-    
+
     cout << endl;
-    
+
     cout << "Choisir un Use Case : \n";
     cout << "  1. Pas de SmartGrid : on charge tant qu'on peut et on ne s'arrête que quand le véhicule est complètement chargé.\n";
     cout << "  2. On ne recharge pas entre 18h et 21h.\n";
     cout << "  3. On ne recharge pas entre 18h et 21h et on fait du Vehicle2Grid.";
     cout << endl << "Votre choix : ";
-    
+
     string useCase_str;
     int useCase;
     cin >> useCase_str;
@@ -105,9 +105,9 @@ int main(int argc, const char * argv[]) {
     } catch (const boost::bad_lexical_cast &) {
         useCase = 0;
     }
-    
+
     cout << endl << "Use Case choisi : " << (useCase + 1) << endl << endl;
-    
+
     const int dureeDeltaT = duree * 1440 / deltaT;
     vector<double> puissanceReseau(dureeDeltaT, 0.0);
     vector<double> puissanceMoyenne(dureeDeltaT, 0.0);
@@ -119,15 +119,15 @@ int main(int argc, const char * argv[]) {
             puissanceReseau[i] = 0.0;
         }
     }
-    
+
     cout << endl << "Calculs terminés" << endl;
-    
+
     // On exporte le dernier jour entier
     string fileName = "courbe_deltaT" + boost::lexical_cast<std::string>(deltaT) + "_duree" + boost::lexical_cast<std::string>(duree) + "_taille" + boost::lexical_cast<std::string>(taille) + "_iterations" + boost::lexical_cast<std::string>(iterations) + "_usecase" + useCase_str + "";
     int index_min = (duree-1) * 1440 / deltaT;
     int index_max = duree * 1440 / deltaT;
     ofstream donnees(fileName + ".csv");
-    
+
     if (donnees) {
         double tps = 0.0;
         for (int i = index_min; i < index_max; i++) {
@@ -138,7 +138,7 @@ int main(int argc, const char * argv[]) {
     } else {
         cerr << "ERREUR : impossible d'ouvrir le fichier 'puissance.dat'." << endl;
     }
-    
+
     try {
         Gnuplot::set_terminal_std("postscript");
         Gnuplot g1("courbe");
@@ -147,7 +147,7 @@ int main(int argc, const char * argv[]) {
         g1.set_title(title);
         g1.set_xlabel("Temps (h)");
         g1.set_ylabel("Puissance (kW)");
-        
+
         vector<double> x, y;
         double tps = 0.0;
         for (int i = index_min; i < index_max; i++) {
@@ -155,18 +155,18 @@ int main(int argc, const char * argv[]) {
             x.push_back(tps);
             y.push_back(puissanceMoyenne[i]);
         }
-        
+
         g1.set_xrange(0.0, 24.0);
         g1.savetops(fileName);
         g1.set_style("histeps").plot_xy(x, y, "");
-        
+
         cout << endl << "Graphique terminé" << endl;
     } catch (GnuplotException ge) {
         cout << ge.what() << endl;
     }
-    
+
     t2 = clock();
-    
+
     cout << "Terminé en " << (t2 - t1)/float(CLOCKS_PER_SEC) << " s" << endl;
     return 0;
 }
