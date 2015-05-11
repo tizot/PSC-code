@@ -251,6 +251,10 @@ bool checkOrdreHorairesDepart(std::vector<int> &horairesDepart) {
     return res;
 }
 
+boost::random::bernoulli_distribution<> dist_willToCharge(0.66);
+bool initWillToCharge(){
+    return dist_willToCharge(gen);
+}
 
 // Constructeur
 Vehicule::Vehicule() {
@@ -264,7 +268,7 @@ Vehicule::Vehicule(int deltaT, bool debug) {
     etatMouvActuel = BRANCHE_PAS_EN_CHARGE;
     etatMouvSuivant = BRANCHE_PAS_EN_CHARGE;
     nbTrajetsEffectues = 0;
-    willToCharge = true;
+    willToCharge = initWillToCharge();
     typeVehicule = initType();
     position = (typeVehicule == VE_PARTICULIER) ? MAISON : TRAVAIL;
     modele = initModele(typeVehicule);
@@ -393,7 +397,7 @@ int Vehicule::smartGrid(int temps, int deltaT, int useCase) {
 
 int Vehicule::transition(int temps, int deltaT, int useCase) {
     int mouv(getEtatMouvActuel());
-    
+    bool needToCharge(false);
     if (mouv == EN_TRAIN_DE_ROULER) {
         if ((getDistanceRestante() <= 0) || (getSoc() <= 0)) {
             setEtatMouvSuivant(GARE_NON_BRANCHE); // on passe par l'état GARE_NON_BRANCHE avant l'état BRANCHE_* (car deltaT petit)
@@ -409,15 +413,17 @@ int Vehicule::transition(int temps, int deltaT, int useCase) {
                 setEtatMouvSuivant(EN_TRAIN_DE_ROULER);
                 return 0;
             } else {
-                setWillToCharge(true);
+                needToCharge=true;
             }
         }
         
         if (getEtatMouvActuel() == GARE_NON_BRANCHE) {
-            if (!getAccesBornes(getPosition()) || !getWillToCharge()) {
-                if (!getWillToCharge())
-                    std::cout << "J'ai pas de bornes !!! :'(" << std::endl;
+            if (!getAccesBornes(getPosition())) {
                 setEtatMouvSuivant(GARE_NON_BRANCHE);
+                return 0;
+            }
+            if (!(needToCharge || getWillToCharge())){
+                setEtatMouvActuel(GARE_NON_BRANCHE);
                 return 0;
             }
         }
@@ -665,6 +671,7 @@ void Vehicule::reinitJour() {
     // Réinitialisation de certaines variables à minuit
     resetNbTrajetsEffectues();
     setNeedToReset(false);
+    setWillToCharge(false);
 }
 
 void Vehicule::printInfos(int deltaT) const {
