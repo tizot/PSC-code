@@ -252,7 +252,7 @@ bool checkOrdreHorairesDepart(std::vector<int> &horairesDepart) {
 }
 
 boost::random::bernoulli_distribution<> dist_willToCharge(0.66);
-bool initWillToCharge(){
+bool initWillToCharge() {
     return dist_willToCharge(gen);
 }
 
@@ -348,7 +348,7 @@ Vehicule::~Vehicule() {
 
 /*
  * smartGrid() 
- * Définit le conmportement smartGrid choisi
+ * Définit le comportement smartGrid choisi
  */
 int Vehicule::smartGrid(int temps, int deltaT, int useCase) {
     double heure = ((temps * deltaT) % 1440) / 60.0;
@@ -413,7 +413,7 @@ int Vehicule::transition(int temps, int deltaT, int useCase) {
                 setEtatMouvSuivant(EN_TRAIN_DE_ROULER);
                 return 0;
             } else {
-                needToCharge=true;
+                needToCharge = true;
             }
         }
         
@@ -422,7 +422,7 @@ int Vehicule::transition(int temps, int deltaT, int useCase) {
                 setEtatMouvSuivant(GARE_NON_BRANCHE);
                 return 0;
             }
-            if (!(needToCharge || getWillToCharge())){
+            if (!(needToCharge || getWillToCharge())) {
                 setEtatMouvActuel(GARE_NON_BRANCHE);
                 return 0;
             }
