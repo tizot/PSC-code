@@ -15,7 +15,7 @@
 class Vehicule {
 public:
     Vehicule();
-    Vehicule(int deltaT, bool debug); // constructeur
+    Vehicule(int deltaT,double wTc, double pCharge, bool debug); // constructeur
     ~Vehicule();
     
     // Données véhicule (constantes)

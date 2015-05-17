@@ -26,11 +26,11 @@ vector<double> initPuissanceReseau(int dureeSim) {
     return puissance;
 }
 
-void modele(int dureeSimulation, int deltaT, int tailleEchantillon, int useCase, vector<double> &puissanceReseau) { // dureeSimulation se mesure en deltaT
+void modele(int dureeSimulation, int deltaT, int tailleEchantillon, int useCase, double wTc, double pCharge, vector<double> &puissanceReseau) { // dureeSimulation se mesure en deltaT
     //cout << "Init" << endl;
     for (int i = 0; i < tailleEchantillon; i++) {
         cout << "Véhicule " << (i+1) << " sur " << boost::lexical_cast<std::string>(tailleEchantillon) << ".          \r" << flush;
-        Vehicule *vehicule = new Vehicule(deltaT, false);
+        Vehicule *vehicule = new Vehicule(deltaT, wTc, pCharge, false);
         //cout << "Véhicule " << (i+1) << endl;
         //vehicule->printInfos(deltaT);
         int temps = 0;
@@ -45,8 +45,8 @@ void modele(int dureeSimulation, int deltaT, int tailleEchantillon, int useCase,
 int main(int argc, const char * argv[]) {
     double t1, t2;
     t1 = clock();
-    if (argc < 5) {
-        cout << "Usage : modele_simulation deltaT(min) duree(j) taille iterations" << endl;
+    if (argc < 7) {
+        cout << "Usage : modele_simulation deltaT(min) duree(j) taille iterations wTc pCharge" << endl;
         return -1;
     }
 
@@ -54,6 +54,8 @@ int main(int argc, const char * argv[]) {
     int deltaT = 10; // in minutes
     int taille = 100;
     int iterations = 10;
+    double wTc=0.0;
+    double pCharge=0.0;
 
     try {
         deltaT = boost::lexical_cast<int>(argv[1]);
@@ -86,6 +88,18 @@ int main(int argc, const char * argv[]) {
         cerr << "Le nombre d'itérations doit être un entier strictement positif." << endl;
         cout << "Valeur par défaut utilisée : 10." << endl;
     }
+    
+ 
+    	wTc = boost::lexical_cast<double>(argv[5]);
+   // } catch (const boost::bad_lexical cast &) {
+    //	cerr << "Le nombre wTC doit être un nombre décimal." << endl;
+    //}
+    
+    //try {
+    	pCharge = boost::lexical_cast<double>(argv[5]);
+   // } catch (const boost::bad_lexical cast &) {
+    	//cerr << "Le nombre pCharge doit être un nombre décimal." << endl;
+    //}//
 
     cout << endl;
 
@@ -113,7 +127,7 @@ int main(int argc, const char * argv[]) {
     vector<double> puissanceMoyenne(dureeDeltaT, 0.0);
     for (int j(0); j < iterations; j++) {
         cout << "\033[FItération " << (j+1) << " sur " << boost::lexical_cast<std::string>(iterations) << ".                    \n" << flush;
-        modele(dureeDeltaT, deltaT, taille, useCase, puissanceReseau);
+        modele(dureeDeltaT, deltaT, taille, useCase,wTc,pCharge, puissanceReseau);
         for (int i(0); i < dureeDeltaT; i++) {
             puissanceMoyenne[i] += puissanceReseau[i] / (double)iterations;
             puissanceReseau[i] = 0.0;
@@ -151,7 +165,7 @@ int main(int argc, const char * argv[]) {
         vector<double> x, y;
         double tps = 0.0;
         for (int i = index_min; i < index_max; i++) {
-            tps = (((i - index_min) * deltaT) % 1440) / 60.0;
+            tps = (((i - index_min) * deltaT) % (1440)) / 60.0;
             x.push_back(tps);
             y.push_back(puissanceMoyenne[i]);
         }

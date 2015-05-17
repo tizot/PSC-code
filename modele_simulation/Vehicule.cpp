@@ -251,20 +251,36 @@ bool checkOrdreHorairesDepart(std::vector<int> &horairesDepart) {
     return res;
 }
 
-
+boost::random::bernoulli_distribution<> dist_willToCharge(0.75);
+bool initWillToCharge() {
+   return dist_willToCharge(gen);
+}
+boost::random::bernoulli_distribution<> dist_puissanceCharge(0.70);
+double initPuissanceCharge() {
+   if (dist_puissanceCharge(gen))
+   	return 50.0;
+   else return 3.5;
+}
 // Constructeur
 Vehicule::Vehicule() {
     //
 }
 
-Vehicule::Vehicule(int deltaT, bool debug) {
+Vehicule::Vehicule(int deltaT,double wTc, double pCharge, bool debug) {
     if (debug)
         std::cout << "Init VE" << std::endl;
+        
+    boost::random::bernoulli_distribution<> dist_willToCharge(wTc);
+    
+    boost::random::bernoulli_distribution<> dist_puissanceCharge(pCharge);
+    //double initPuissanceCharge() {
+      
+    
     soc = 100;
     etatMouvActuel = BRANCHE_PAS_EN_CHARGE;
     etatMouvSuivant = BRANCHE_PAS_EN_CHARGE;
     nbTrajetsEffectues = 0;
-    willToCharge = true;
+    willToCharge = dist_willToCharge(gen);
     typeVehicule = initType();
     position = (typeVehicule == VE_PARTICULIER) ? MAISON : TRAVAIL;
     modele = initModele(typeVehicule);
@@ -273,6 +289,8 @@ Vehicule::Vehicule(int deltaT, bool debug) {
     consommation = capacite / stats_autonomieVehicule[modele];
     longueurTrajet = initLongueurTrajet();
     puissanceCharge = 3.5;
+    if (dist_puissanceCharge(gen))
+   	    puissanceCharge = 50.0;
     acceptSmartGrid = initAcceptSmartGrid();
     debutSmartGrid = initDebutSmartGrid();
     acceptV2G = (acceptSmartGrid) ? initAcceptV2G() : false;
@@ -393,7 +411,8 @@ int Vehicule::smartGrid(int temps, int deltaT, int useCase) {
 
 int Vehicule::transition(int temps, int deltaT, int useCase) {
     int mouv(getEtatMouvActuel());
-    
+    bool needToCharge(false);
+   // Si il est en train de rouler
     if (mouv == EN_TRAIN_DE_ROULER) {
         if ((getDistanceRestante() <= 0) || (getSoc() <= 0)) {
             setEtatMouvSuivant(GARE_NON_BRANCHE); // on passe par l'état GARE_NON_BRANCHE avant l'état BRANCHE_* (car deltaT petit)
@@ -403,27 +422,48 @@ int Vehicule::transition(int temps, int deltaT, int useCase) {
             setEtatMouvSuivant(EN_TRAIN_DE_ROULER);
             return 0;
         }
-    } else {
+    }
+    // Sinon :
+    else {
+    	// On regarde s'il doit démarrer
         if (getNbTrajets() > getNbTrajetsEffectues() && ((temps * deltaT) % 1440) >= deltaT * getHoraireDepart(getNbTrajetsEffectues())) {
+            // Si il est chargé comme il faut : il part
             if (getSoc() >= getSocMin()) {
                 setEtatMouvSuivant(EN_TRAIN_DE_ROULER);
                 return 0;
-            } else {
-                setWillToCharge(true);
+            }
+            // sinon needToCharge True!
+            else {
+                needToCharge = true;
             }
         }
-        
+        if (getSocMin() >= getSoc()){
+        	needToCharge = true;
+        }
         if (getEtatMouvActuel() == GARE_NON_BRANCHE) {
-            if (!getAccesBornes(getPosition()) || !getWillToCharge()) {
-                if (!getWillToCharge())
-                    std::cout << "J'ai pas de bornes !!! :'(" << std::endl;
+            if (!getAccesBornes(getPosition()) ) {
                 setEtatMouvSuivant(GARE_NON_BRANCHE);
                 return 0;
             }
+            else { //Il est garé et y'a une borne
+            	if (needToCharge) { // il a besoin de se charger
+            		setEtatMouvSuivant(smartGrid(temps, deltaT, useCase));
+            		return 0;
+            	}
+            	else{ // il a pas besoin
+            		if (getWillToCharge()) { // il a envie
+            			setEtatMouvSuivant(smartGrid(temps, deltaT, useCase));	
+            			return 0;
+            		}
+            		else{  //il a pas envier
+            			setEtatMouvSuivant(GARE_NON_BRANCHE);
+            			return 0;
+            		}
+            	}
+            }
         }
-        
         setEtatMouvSuivant(smartGrid(temps, deltaT, useCase));
-        return 0;
+      	//needToCharge = false;
     }
 }
 
